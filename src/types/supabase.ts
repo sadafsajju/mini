@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      kanban_boards: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          position: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          color: string
+          created_at?: string | null
+          id?: string
+          position?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          position?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           address: string | null
@@ -45,11 +72,37 @@ export type Database = {
         }
         Relationships: []
       }
+      leads_status_migration: {
+        Row: {
+          executed: boolean | null
+          executed_at: string | null
+          id: number
+        }
+        Insert: {
+          executed?: boolean | null
+          executed_at?: string | null
+          id?: number
+        }
+        Update: {
+          executed?: boolean | null
+          executed_at?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      add_status_column_to_leads: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      check_column_exists: {
+        Args: { p_table: string; p_column: string }
+        Returns: boolean
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown

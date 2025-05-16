@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Header } from '@/components/Header';
 
 export default function Home() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+      <Header />
       {/* Hero Section */}
       <section className="flex-1 flex flex-col justify-center items-center text-center px-4 py-16 md:py-24 bg-gradient-to-b from-background to-muted">
         <div className="max-w-3xl mx-auto">

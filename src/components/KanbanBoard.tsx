@@ -59,6 +59,7 @@ export default function KanbanBoard({
       // Update locally first for smooth UI
       const updatedLead = { ...draggedLead, status: targetColumn.id };
       
+      // Update the local state immediately
       setLocalLeads(prev => {
         return prev.map(lead => 
           lead.id === draggedLead.id ? updatedLead : lead
@@ -76,12 +77,20 @@ export default function KanbanBoard({
           onLeadUpdate(apiUpdatedLead);
         }
         
-        // Force a refresh of the boards
+        // Force a refresh of the boards with the new local leads
         fetchBoards();
       } catch (error) {
         console.error('Error updating lead status:', error);
-        // If we're in development without the status column, we don't need to display an error
-        // The localStorage version will still work for demo purposes
+        
+        // Revert the local change if the API update fails
+        setLocalLeads(prev => {
+          return prev.map(lead => 
+            lead.id === draggedLead.id ? { ...lead, status: sourceColumn.id } : lead
+          );
+        });
+        
+        // Re-fetch boards to ensure UI is in sync
+        fetchBoards();
       }
     }
     

@@ -26,7 +26,7 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
     : '';
 
   return (
-    <Card className="mb-3 shadow-none border-none rounded-xl hover:shadow-md transition-shadow group relative">
+    <Card className="mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -34,7 +34,7 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
               variant="ghost" 
               size="sm" 
               onClick={() => onEditLead && onEditLead(lead.id)}
-              className="absolute right-2 top-2 h-7 w-7 p-0 opacity-0 bg-white/10 hover:bg-blue-600/10 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+              className="absolute right-2 top-2 h-7 w-7 p-0 opacity-0 bg-background/80 hover:bg-primary/10 group-hover:opacity-100 transition-opacity backdrop-blur-sm dark:bg-background/40">
               <Pencil className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
@@ -60,7 +60,7 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
           </div>
         )}
 
-          <div className="mt-2 text-sm border-t pt-2 text-muted-foreground line-clamp-2">
+          <div className="mt-2 text-sm border-t border-border/50 dark:border-muted/20 pt-2 text-muted-foreground line-clamp-2">
             {lead.created_at && (
               <CardDescription className="flex items-center text-xs">
                 {formattedDate}
