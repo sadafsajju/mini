@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { KanbanColumn as KanbanColumnType, Lead, LeadStatus } from '@/types/leads';
+import { KanbanColumn as KanbanColumnType, Lead } from '@/types/leads';
 import KanbanColumn from './KanbanColumn';
 import KanbanBoardManager from './KanbanBoardManager';
-import { updateLead } from '@/lib/api/leads';
+import DeleteZone from './DeleteZone';
+import { updateLead, deleteLead } from '@/lib/api/leads';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
 
 interface KanbanBoardProps {
@@ -25,6 +26,8 @@ export default function KanbanBoard({
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
   const [sourceColumn, setSourceColumn] = useState<KanbanColumnType | null>(null);
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
   
   // Use the custom hook to manage kanban boards
   const { 
@@ -36,6 +39,9 @@ export default function KanbanBoard({
     removeBoard,
     fetchBoards
   } = useKanbanBoards(localLeads);
+
+  // Only show loading spinner on initial load when no columns are available
+  const shouldShowLoading = boardsLoading && columns.length === 0;
 
   // Keep local state of leads for smooth drag-and-drop even when API updates fail
   // We use a ref to track if this is the initial load to avoid unnecessary refreshes
@@ -55,12 +61,69 @@ export default function KanbanBoard({
   const handleDragStart = (e: React.DragEvent, lead: Lead, column: KanbanColumnType) => {
     setDraggedLead(lead);
     setSourceColumn(column);
+    setIsDragging(true);
     e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setIsOverDeleteZone(false);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDeleteZoneDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsOverDeleteZone(true);
+  };
+
+  const handleDeleteZoneDragLeave = () => {
+    setIsOverDeleteZone(false);
+  };
+
+  const handleDeleteZoneDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOverDeleteZone(false);
+    setIsDragging(false);
+    
+    if (draggedLead && sourceColumn) {
+      try {
+        // Update local state immediately for better UX
+        setLocalLeads(prev => prev.filter(lead => lead.id !== draggedLead.id));
+        
+        // Important: Also update the columns state directly for immediate UI update
+        const updatedColumns = columns.map(column => ({
+          ...column,
+          leads: column.leads.filter(lead => lead.id !== draggedLead.id)
+        }));
+        
+        // Delete the lead from the database
+        await deleteLead(draggedLead.id);
+        
+        // Call the callback to inform parent components about deletion
+        if (onLeadUpdate) {
+          // We're passing a special flag to indicate deletion
+          onLeadUpdate({
+            ...draggedLead,
+            __deleted: true
+          } as any);
+        }
+      } catch (error) {
+        console.error('Error deleting lead:', error);
+        
+        // Revert the local change if the API delete fails
+        // The original leads array from props will have the lead we tried to delete
+        setLocalLeads(leads);
+        fetchBoards({ silent: true });
+      }
+    }
+    
+    setDraggedLead(null);
+    setSourceColumn(null);
   };
 
   // Local function to update columns with a lead moved to a new column
@@ -102,6 +165,7 @@ export default function KanbanBoard({
       if (!result) {
         setDraggedLead(null);
         setSourceColumn(null);
+        setIsDragging(false);
         return;
       }
       
@@ -146,6 +210,7 @@ export default function KanbanBoard({
     
     setDraggedLead(null);
     setSourceColumn(null);
+    setIsDragging(false);
   };
 
   // Re-fetch boards when leads change
@@ -157,7 +222,10 @@ export default function KanbanBoard({
   }, [fetchBoards, localLeads]);
 
   return (
-    <div className={`w-full ${className}`}>
+    <div 
+      className={`w-full ${className}`}
+      onDragEnd={handleDragEnd}
+    >
       {showBoardManager && (
         <KanbanBoardManager 
           boards={columns}
@@ -167,7 +235,7 @@ export default function KanbanBoard({
         />
       )}
 
-      {boardsLoading ? (
+      {shouldShowLoading ? (
         <div className="flex justify-center items-center p-8">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
@@ -176,7 +244,7 @@ export default function KanbanBoard({
           <p className="text-destructive font-medium">{boardsError}</p>
         </div>
       ) : (
-        <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden">
+        <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden h-full">
           {columns.map(column => (
             <KanbanColumn
               key={`${column.id}-${column.leads.length}`} // Use leads length in key to force re-render
@@ -190,6 +258,15 @@ export default function KanbanBoard({
           ))}
         </div>
       )}
+
+      {/* Use our DeleteZone component */}
+      <DeleteZone
+        visible={isDragging}
+        isOver={isOverDeleteZone}
+        onDragOver={handleDeleteZoneDragOver}
+        onDragLeave={handleDeleteZoneDragLeave}
+        onDrop={handleDeleteZoneDrop}
+      />
     </div>
   );
 }

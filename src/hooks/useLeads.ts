@@ -9,21 +9,29 @@ export function useLeads() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const fetchLeads = useCallback(async () => {
-    setLoading(true);
+  const fetchLeads = useCallback(async (options?: { silent?: boolean }) => {
+    // Only show loading state if not in silent mode and not the initial load
+    if (!options?.silent) {
+      setLoading(true);
+    }
     setError(null);
     
     try {
       const data = await getLeads();
       setLeads(data);
+      // Mark initial load as complete
+      setIsInitialLoad(false);
     } catch (err) {
       console.error('Error in useLeads hook:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch leads');
       // Set empty array to prevent undefined errors in UI
       setLeads([]);
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -59,6 +67,13 @@ export function useLeads() {
       )
     );
   }, []);
+  
+  // Function to remove a lead from the local state
+  const removeLocalLead = useCallback((leadId: number) => {
+    setLeads(prevLeads => 
+      prevLeads.filter(lead => lead.id !== leadId)
+    );
+  }, []);
 
   // Initial fetch
   useEffect(() => {
@@ -72,6 +87,8 @@ export function useLeads() {
     searchTerm,
     setSearchTerm: handleSearch,
     refreshLeads: fetchLeads,
-    updateLocalLead
+    updateLocalLead,
+    removeLocalLead,
+    isInitialLoad
   };
 }

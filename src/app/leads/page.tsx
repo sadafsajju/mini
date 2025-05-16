@@ -4,12 +4,12 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Kanban, Edit, Settings, SquareStack } from 'lucide-react';
+import { Search, Plus, Kanban, SquareStack } from 'lucide-react';
 import KanbanBoard from '@/components/KanbanBoard';
 import LeadSheet from '@/components/LeadSheet';
 import KanbanBoardManagerSheet from '@/components/KanbanBoardManagerSheet';
 import { useLeads } from '@/hooks/useLeads';
-import { Lead, KanbanColumn } from '@/types/leads'; // Added KanbanColumn import
+import { Lead, KanbanColumn } from '@/types/leads';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
@@ -20,14 +20,15 @@ export default function LeadsPage() {
   const [isLeadSheetOpen, setIsLeadSheetOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>(undefined);
   const [isKanbanManagerOpen, setIsKanbanManagerOpen] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0); // Add a forceUpdate state to trigger re-renders
+  const [forceUpdate, setForceUpdate] = useState(0);
   
   const {
     leads,
     loading: leadsLoading,
     error: leadsError,
     refreshLeads,
-    updateLocalLead
+    updateLocalLead,
+    removeLocalLead
   } = useLeads();
   
   // Get kanban boards data using the hook
@@ -40,6 +41,9 @@ export default function LeadsPage() {
     removeBoard,
     fetchBoards
   } = useKanbanBoards(leads);
+  
+  // Only show loading spinner on initial load, not during actions
+  const showLoading = leadsLoading && boards.length === 0;
   
   const handleEditLead = (id: number) => {
     const lead = leads.find(lead => lead.id === id);
@@ -62,26 +66,53 @@ export default function LeadsPage() {
     setIsKanbanManagerOpen(!isKanbanManagerOpen);
   };
   
+  // Enhanced handler for lead updates, including deletions
   const handleLeadUpdate = (updatedLead: Lead) => {
-    updateLocalLead(updatedLead);
+    // Check if this is a deletion (we added the __deleted flag in KanbanBoard)
+    if ((updatedLead as any).__deleted) {
+      // If the lead was deleted, remove it from local state
+      if (removeLocalLead) {
+        removeLocalLead(updatedLead.id);
+      } else {
+        // Fallback if removeLocalLead isn't available - use silent refresh
+        refreshLeads({ silent: true });
+      }
+    } else {
+      // Normal update
+      updateLocalLead(updatedLead);
+    }
+    
+    // Force refresh of the board without loading state
+    setTimeout(() => {
+      fetchBoards({ silent: true });
+    }, 100);
   };
 
   // Enhanced callbacks with proper state updates
   const handleAddBoard = async (board: Omit<KanbanColumn, 'leads' | 'id'>) => {
     const result = await addBoard(board);
-    setForceUpdate(prev => prev + 1); // Force a re-render
+    // Force a silent refresh 
+    setTimeout(() => {
+      fetchBoards({ silent: true });
+    }, 100);
     return result;
   };
 
   const handleUpdateBoard = async (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => {
     const result = await updateBoard(id, board);
-    setForceUpdate(prev => prev + 1); // Force a re-render
+    // Force a silent refresh
+    setTimeout(() => {
+      fetchBoards({ silent: true });
+    }, 100);
     return result;
   };
 
   const handleRemoveBoard = async (id: string) => {
     await removeBoard(id);
-    setForceUpdate(prev => prev + 1); // Force a re-render
+    // Force a silent refresh
+    setTimeout(() => {
+      fetchBoards({ silent: true });
+    }, 100);
   };
 
   // Skeleton card component for loading state
@@ -129,10 +160,10 @@ export default function LeadsPage() {
     </div>
   );
 
-  // Effect to refresh boards when forceUpdate changes
+  // Effect to refresh boards when forceUpdate changes, but silently
   useEffect(() => {
     if (forceUpdate > 0) {
-      fetchBoards();
+      fetchBoards({ silent: true });
     }
   }, [forceUpdate, fetchBoards]);
 
@@ -157,7 +188,7 @@ export default function LeadsPage() {
             </div>
 
             <div className="flex items-center gap-1 px-3 py-2 rounded-md">
-              <Button variant={'ghost'} className=' text-muted-foreground '>
+              <Button variant={'ghost'} className='text-muted-foreground'>
                 <Kanban className="h-4 w-4" />
               </Button>
             </div>
@@ -168,14 +199,14 @@ export default function LeadsPage() {
                 onOpenChange={setIsLeadSheetOpen}
                 lead={selectedLead}
                 onSuccess={(lead) => {
-                  refreshLeads();
+                  // Refresh without loading spinners
+                  refreshLeads({ silent: true });
                 }}
                 onError={(error) => {
-                  // Toast is shown by the component itself
                   console.error('Error with lead operation:', error);
                 }}
                 trigger={
-                  <Button variant={'ghost'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground ">
+                  <Button variant={'ghost'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground">
                     <Plus className="h-4 w-4" />
                   </Button>
                 }
@@ -203,7 +234,7 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          {leadsLoading || boardsLoading ? (
+          {showLoading ? (
             <div className="flex-1 overflow-hidden">
               <SkeletonBoard />
             </div>
@@ -239,7 +270,6 @@ export default function LeadsPage() {
                       onEditLead={handleEditLead}
                       onContactLead={handleContactLead}
                       className="h-full overflow-hidden"
-                      key={`kanban-board-${forceUpdate}`} // Add a key based on forceUpdate
                     />
                   </div>
                 </>

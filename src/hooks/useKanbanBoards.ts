@@ -70,7 +70,9 @@ export function useKanbanBoards(leads: Lead[]) {
       console.error('Error fetching kanban boards:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch kanban boards');
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, [organizeLeadsIntoBoards]);
 
@@ -93,7 +95,6 @@ export function useKanbanBoards(leads: Lead[]) {
   const addBoard = useCallback(async (board: Omit<KanbanColumn, 'leads' | 'id'>) => {
     try {
       setError(null);
-      setLoading(true);
       
       // Create the board in the database
       const newBoard = await createKanbanBoard(board);
@@ -107,20 +108,13 @@ export function useKanbanBoards(leads: Lead[]) {
       // Update the local state immediately with the new board
       setBoards(prev => [...prev, newBoardWithLeads]);
       
-      // Force a refresh to ensure everything is in sync
-      setTimeout(() => {
-        fetchBoards({ silent: true });
-      }, 100);
-      
-      setLoading(false);
       return newBoard;
     } catch (err) {
       console.error('Error adding kanban board:', err);
       setError(err instanceof Error ? err.message : 'Failed to add kanban board');
-      setLoading(false);
       throw err;
     }
-  }, [fetchBoards]);
+  }, []);
 
   // Update a board
   const updateBoard = useCallback(async (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => {
@@ -135,18 +129,13 @@ export function useKanbanBoards(leads: Lead[]) {
         )
       );
       
-      // Force a refresh to ensure everything is in sync
-      setTimeout(() => {
-        fetchBoards({ silent: true });
-      }, 100);
-      
       return updatedBoard;
     } catch (err) {
       console.error(`Error updating kanban board with ID ${id}:`, err);
       setError(err instanceof Error ? err.message : 'Failed to update kanban board');
       throw err;
     }
-  }, [fetchBoards]);
+  }, []);
 
   // Remove a board
   const removeBoard = useCallback(async (id: string) => {
@@ -156,17 +145,12 @@ export function useKanbanBoards(leads: Lead[]) {
       
       // Immediately update the local state
       setBoards(prev => prev.filter(b => b.id !== id));
-      
-      // Force a refresh to ensure everything is in sync
-      setTimeout(() => {
-        fetchBoards({ silent: true });
-      }, 100);
     } catch (err) {
       console.error(`Error removing kanban board with ID ${id}:`, err);
       setError(err instanceof Error ? err.message : 'Failed to remove kanban board');
       throw err;
     }
-  }, [fetchBoards]);
+  }, []);
 
   // Reorder boards
   const reorderBoards = useCallback(async (reorderedBoards: KanbanColumn[]) => {
@@ -189,7 +173,7 @@ export function useKanbanBoards(leads: Lead[]) {
       setError(err instanceof Error ? err.message : 'Failed to reorder kanban boards');
       
       // Refresh boards on error to ensure UI is in sync with the database
-      fetchBoards();
+      fetchBoards({ silent: true });
       throw err;
     }
   }, [fetchBoards]);
