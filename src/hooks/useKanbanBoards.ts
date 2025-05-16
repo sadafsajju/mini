@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { KanbanColumn, Lead } from '@/types/leads';
 import { 
   getKanbanBoards, 
@@ -16,9 +16,12 @@ export function useKanbanBoards(leads: Lead[]) {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch boards from the API
-  const fetchBoards = useCallback(async () => {
+  const fetchBoards = useCallback(async (options?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      // Only show loading state if not in silent mode
+      if (!options?.silent) {
+        setLoading(true);
+      }
       setError(null);
       
       const boardsData = await getKanbanBoards();
@@ -66,29 +69,50 @@ export function useKanbanBoards(leads: Lead[]) {
     }
   }, [leads]);
 
+  // Track initial mount to avoid showing loading spinner on every leads change
+  const isInitialMount = useRef(true);
+
   // Initial fetch
   useEffect(() => {
-    fetchBoards();
+    if (isInitialMount.current) {
+      // On initial mount, show loading spinner
+      fetchBoards();
+      isInitialMount.current = false;
+    } else {
+      // On subsequent updates to leads, don't show loading spinner
+      fetchBoards({ silent: true });
+    }
   }, [fetchBoards]);
 
   // Add a new board
   const addBoard = useCallback(async (board: Omit<KanbanColumn, 'leads' | 'id'>) => {
     try {
       setError(null);
+      // Show loading state while adding the board
+      setLoading(true);
+      
+      // Create the board in the database
       const newBoard = await createKanbanBoard(board);
       
+      // Update the local state immediately with the new board
       setBoards(prev => [
         ...prev,
         { ...newBoard, leads: [] }
       ]);
+      
+      // Fetch all boards to ensure everything is in sync
+      // Use silent mode to avoid showing loading spinner again
+      await fetchBoards({ silent: true });
       
       return newBoard;
     } catch (err) {
       console.error('Error adding kanban board:', err);
       setError(err instanceof Error ? err.message : 'Failed to add kanban board');
       throw err;
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [fetchBoards]);
 
   // Update a board
   const updateBoard = useCallback(async (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => {

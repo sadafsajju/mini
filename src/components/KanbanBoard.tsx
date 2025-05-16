@@ -11,6 +11,7 @@ interface KanbanBoardProps {
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
   className?: string;
+  showBoardManager?: boolean;
 }
 
 export default function KanbanBoard({ 
@@ -18,12 +19,12 @@ export default function KanbanBoard({
   onLeadUpdate,
   onEditLead,
   onContactLead,
-  className = ''
+  className = '',
+  showBoardManager = false
 }: KanbanBoardProps) {
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
   const [sourceColumn, setSourceColumn] = useState<KanbanColumnType | null>(null);
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
-  const [showBoardManager, setShowBoardManager] = useState(false);
   
   // Use the custom hook to manage kanban boards
   const { 
@@ -37,8 +38,21 @@ export default function KanbanBoard({
   } = useKanbanBoards(localLeads);
 
   // Keep local state of leads for smooth drag-and-drop even when API updates fail
+  // We use a ref to track if this is the initial load to avoid unnecessary refreshes
+  const isInitialLoad = React.useRef(true);
+  
   useEffect(() => {
+    // Only update localLeads when the leads prop changes
     setLocalLeads(leads);
+    
+    // Skip the first render to avoid double loading
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+    
+    // We don't call fetchBoards() here to avoid triggering loading states
+    // The boards will be updated through the localLeads state changes
   }, [leads]);
 
   const handleDragStart = (e: React.DragEvent, lead: Lead, column: KanbanColumnType) => {
@@ -52,14 +66,53 @@ export default function KanbanBoard({
     e.dataTransfer.dropEffect = 'move';
   };
 
+  // Local function to update columns with a lead moved to a new column
+  const updateColumnsLocally = (leadId: number, sourceColumnId: string, targetColumnId: string) => {
+    // Create a deep copy of the current columns
+    const updatedColumns = columns.map(column => ({
+      ...column,
+      leads: [...column.leads]
+    }));
+    
+    // Find the lead in the source column
+    const sourceColumnIndex = updatedColumns.findIndex(col => col.id === sourceColumnId);
+    if (sourceColumnIndex === -1) return;
+    
+    const leadIndex = updatedColumns[sourceColumnIndex].leads.findIndex(lead => lead.id === leadId);
+    if (leadIndex === -1) return;
+    
+    // Get the lead and update its status
+    const lead = { ...updatedColumns[sourceColumnIndex].leads[leadIndex], status: targetColumnId };
+    
+    // Remove from source column
+    updatedColumns[sourceColumnIndex].leads.splice(leadIndex, 1);
+    
+    // Add to target column
+    const targetColumnIndex = updatedColumns.findIndex(col => col.id === targetColumnId);
+    if (targetColumnIndex !== -1) {
+      updatedColumns[targetColumnIndex].leads.push(lead);
+    }
+    
+    return { updatedColumns, updatedLead: lead };
+  };
+
   const handleDrop = async (e: React.DragEvent, targetColumn: KanbanColumnType) => {
     e.preventDefault();
     
     if (draggedLead && sourceColumn && targetColumn.id !== sourceColumn.id) {
-      // Update locally first for smooth UI
-      const updatedLead = { ...draggedLead, status: targetColumn.id };
+      // Update locally first for smooth UI without triggering loading state
+      const result = updateColumnsLocally(draggedLead.id, sourceColumn.id, targetColumn.id);
+      if (!result) {
+        setDraggedLead(null);
+        setSourceColumn(null);
+        return;
+      }
       
-      // Update the local state immediately
+      // Manually update the local state with our updated columns
+      // This avoids triggering the loading state
+      const { updatedLead } = result;
+      
+      // Update the local leads state
       setLocalLeads(prev => {
         return prev.map(lead => 
           lead.id === draggedLead.id ? updatedLead : lead
@@ -67,7 +120,7 @@ export default function KanbanBoard({
       });
       
       try {
-        // Update lead status in the database
+        // Update lead status in the database in the background
         const apiUpdatedLead = await updateLead(draggedLead.id, { 
           status: targetColumn.id
         });
@@ -76,9 +129,6 @@ export default function KanbanBoard({
         if (onLeadUpdate) {
           onLeadUpdate(apiUpdatedLead);
         }
-        
-        // Force a refresh of the boards with the new local leads
-        fetchBoards();
       } catch (error) {
         console.error('Error updating lead status:', error);
         
@@ -89,8 +139,11 @@ export default function KanbanBoard({
           );
         });
         
-        // Re-fetch boards to ensure UI is in sync
-        fetchBoards();
+        // Manually revert the UI without triggering loading state
+        const revertResult = updateColumnsLocally(draggedLead.id, targetColumn.id, sourceColumn.id);
+        if (revertResult) {
+          // We don't need to do anything with the result here as the useEffect will handle it
+        }
       }
     }
     
@@ -98,22 +151,10 @@ export default function KanbanBoard({
     setSourceColumn(null);
   };
 
-  // Toggle board manager visibility
-  const toggleBoardManager = () => {
-    setShowBoardManager(!showBoardManager);
-  };
+  // Board manager visibility is now controlled by the parent component
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="mb-4">
-        <button 
-          onClick={toggleBoardManager}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-        >
-          {showBoardManager ? 'Hide Board Manager' : 'Manage Boards'}
-        </button>
-      </div>
-
       {showBoardManager && (
         <KanbanBoardManager 
           boards={columns}

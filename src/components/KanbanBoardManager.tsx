@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { KanbanColumn } from '@/types/leads';
-import { X, Edit, Plus } from 'lucide-react';
+import { X, Plus, Pencil } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 interface KanbanBoardManagerProps {
@@ -45,15 +46,26 @@ export default function KanbanBoardManager({
     
     try {
       setIsSubmitting(true);
-      await onAddBoard({
+      
+      // Create the new board data
+      const newBoardData = {
         title: newBoardTitle.trim(),
         color: newBoardColor
-      });
+      };
       
-      // Reset form and close dialog
+      // Add the board to the database
+      const result = await onAddBoard(newBoardData);
+      
+      // Manually update the local boards state to show the new board immediately
+      // This ensures the UI updates right away without needing a refresh
+      const newBoard = { ...result, leads: [] };
+      
+      // Reset form and close sheet
       setNewBoardTitle('');
       setNewBoardColor('blue');
       setIsAddDialogOpen(false);
+      
+      return result;
     } catch (error) {
       console.error('Failed to add board:', error);
     } finally {
@@ -104,21 +116,12 @@ export default function KanbanBoardManager({
   };
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-medium">Kanban Boards</h2>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              <span>Add Board</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Kanban Board</DialogTitle>
-            </DialogHeader>
+    <div>
+      <Sheet open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>Add New Kanban Board</SheetTitle>
+            </SheetHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="title">Board Title</Label>
@@ -148,7 +151,7 @@ export default function KanbanBoardManager({
                 </Select>
               </div>
             </div>
-            <DialogFooter>
+            <SheetFooter className="mt-4">
               <Button 
                 variant="outline" 
                 onClick={() => setIsAddDialogOpen(false)}
@@ -162,16 +165,15 @@ export default function KanbanBoardManager({
               >
                 {isSubmitting ? 'Adding...' : 'Add Board'}
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </SheetFooter>
+          </SheetContent>
+      </Sheet>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 gap-3">
         {boards.map((board) => (
           <div 
             key={board.id} 
-            className="flex items-center justify-between p-2 bg-muted/60 rounded-md"
+            className="flex items-center justify-between px-4 py-2 bg-muted/60 rounded-xl"
           >
             <div className="flex items-center">
               <div className={`w-3 h-3 rounded-full bg-${board.color}-500 mr-2`}></div>
@@ -185,7 +187,7 @@ export default function KanbanBoardManager({
                 className="h-8 w-8" 
                 onClick={() => openEditDialog(board)}
               >
-                <Edit className="h-4 w-4" />
+                <Pencil className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
@@ -199,6 +201,16 @@ export default function KanbanBoardManager({
             </div>
           </div>
         ))}
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center gap-1 mt-2"
+          onClick={() => setIsAddDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Board</span>
+        </Button>
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
