@@ -51,13 +51,13 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="container-fluid mx-auto py-6 px-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div className="container-fluid mx-auto p-4 h-screen overflow-hidden flex flex-col">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <h1 className="text-3xl font-normal">Leads</h1>
       </div>
 
-      <div className="w-full">
-        <div className="flex items-center mb-4">
+      <div className="w-full flex-1 overflow-hidden flex flex-col">
+        <div className="flex items-center mb-2">
 
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-2 top-3 h-4 w-4 text-gray-400" />
@@ -133,12 +133,15 @@ export default function LeadsPage() {
             ) : (
               <>
 
-                  <KanbanBoard 
-                    leads={leads}
-                    onLeadUpdate={handleLeadUpdate}
-                    onEditLead={handleEditLead}
-                    onContactLead={handleContactLead}
-                  />
+                  <div className="flex-1 overflow-hidden">
+                <KanbanBoard 
+                  leads={leads}
+                  onLeadUpdate={handleLeadUpdate}
+                  onEditLead={handleEditLead}
+                  onContactLead={handleContactLead}
+                  className="h-full overflow-hidden"
+                />
+              </div>
 
               </>
             )}

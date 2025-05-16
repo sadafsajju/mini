@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import KanbanCard from './KanbanCard';
 import { KanbanColumn as KanbanColumnType, Lead } from '@/types/leads';
@@ -24,6 +24,16 @@ const colorMap: Record<string, string> = {
   red: 'bg-red-500',
 };
 
+// Map for border colors
+const borderColorMap: Record<string, string> = {
+  blue: 'border-blue-500',
+  yellow: 'border-yellow-500',
+  green: 'border-green-500',
+  purple: 'border-purple-500',
+  gray: 'border-gray-500',
+  red: 'border-red-500',
+};
+
 export default function KanbanColumn({ 
   column,
   onEditLead,
@@ -32,14 +42,24 @@ export default function KanbanColumn({
   onDragOver,
   onDrop
 }: KanbanColumnProps) {
-  // Get the background color class or use a default
+  // Get the background and border color classes or use defaults
   const colorClass = colorMap[column.color] || 'bg-blue-500';
+  const borderColorClass = borderColorMap[column.color] || 'border-blue-500';
+  const [isDragOver, setIsDragOver] = useState(false);
 
   return (
     <div 
-      className="bg-muted/60 rounded-2xl min-w-64 w-72 flex-shrink-0 h-[calc(100vh-11rem)]  flex flex-col"
-      onDragOver={e => onDragOver && onDragOver(e)}
-      onDrop={e => onDrop && onDrop(e, column)}
+      className={`bg-muted/60 rounded-2xl min-w-64 w-72 flex-shrink-0 h-[calc(100vh-11rem)] flex flex-col transition-all ${isDragOver ? `border-2 ${borderColorClass}` : 'border-2 border-transparent'}`}
+      onDragOver={e => {
+        e.preventDefault();
+        setIsDragOver(true);
+        onDragOver && onDragOver(e);
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={e => {
+        setIsDragOver(false);
+        onDrop && onDrop(e, column);
+      }}
     >
       <div className="flex items-center justify-between mb-3 px-4 pt-3">
         <h3 className="font-medium flex items-center">
@@ -51,8 +71,8 @@ export default function KanbanColumn({
       </div>
       <Separator></Separator>
       
-      <ScrollArea className="flex-1 p-3">
-        <div className="space-y-3">
+      <ScrollArea className="flex-1 px-3">
+        <div className="space-y-3 mt-3">
           {column.leads.map(lead => (
             <div 
               key={lead.id} 
@@ -67,12 +87,7 @@ export default function KanbanColumn({
               />
             </div>
           ))}
-          
-          {column.leads.length === 0 && (
-            <div className="text-center py-10 px-3 border border-dashed rounded-md text-muted-foreground text-sm">
-              Drop leads here
-            </div>
-          )}
+
         </div>
       </ScrollArea>
     </div>

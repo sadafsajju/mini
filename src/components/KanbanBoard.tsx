@@ -8,6 +8,7 @@ interface KanbanBoardProps {
   onLeadUpdate?: (updatedLead: Lead) => void;
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
+  className?: string;
 }
 
 // Column definitions with colors and titles
@@ -23,7 +24,8 @@ export default function KanbanBoard({
   leads, 
   onLeadUpdate,
   onEditLead,
-  onContactLead
+  onContactLead,
+  className = ''
 }: KanbanBoardProps) {
   const [columns, setColumns] = useState<KanbanColumnType[]>([]);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
@@ -103,8 +105,8 @@ export default function KanbanBoard({
   };
 
   return (
-    <div className="w-full">
-        <div className="flex gap-4 pb-6 pt-2 px-2 w-fit">
+    <div className={`w-full ${className}`}>
+        <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden">
           {columns.map(column => (
             <KanbanColumn
               key={column.id}
