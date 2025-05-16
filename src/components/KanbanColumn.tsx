@@ -78,7 +78,7 @@ export default function KanbanColumn({
               key={lead.id} 
               draggable
               onDragStart={e => onDragStart && onDragStart(e, lead, column)}
-              className="cursor-grab active:cursor-grabbing"
+              className="cursor-default active:cursor-grabbing"
             >
               <KanbanCard 
                 lead={lead} 

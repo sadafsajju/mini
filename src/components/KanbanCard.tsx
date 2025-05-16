@@ -1,11 +1,11 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, Mail, CalendarClock, Pencil } from 'lucide-react';
-import { Lead } from '@/types/leads';
 import { formatDistanceToNow } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { Lead } from '@/types/leads';
+import { Pencil, Phone } from 'lucide-react';
 
 interface KanbanCardProps {
   lead: Lead;
@@ -45,24 +45,13 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
       </TooltipProvider>
       <CardHeader className="p-3 pb-0">
         <div className="flex justify-between items-start mb-2">
-          <Avatar className="h-8 w-8 text-xs">
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          {lead.created_at && (
-            <CardDescription className="flex items-center text-xs">
-              <CalendarClock className="h-3 w-3 mr-1" />
-              {formattedDate}
-            </CardDescription>
-          )}
+          {/* Status is shown by the column itself, no need for a badge */}
         </div>
-        <CardTitle className="text-base">{lead.name}</CardTitle>
+        <CardTitle className="text-base font-normal capitalize">{lead.name}</CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-2 pb-2">
         <div className="flex items-center text-sm text-muted-foreground mb-1">
-          <Mail className="h-3 w-3 mr-2" />
-          <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline truncate">
             {lead.email}
-          </a>
         </div>
         {lead.phone_number && (
           <div className="flex items-center text-sm text-muted-foreground">
@@ -70,11 +59,15 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
             <span>{lead.phone_number}</span>
           </div>
         )}
-        {lead.notes && (
+
           <div className="mt-2 text-sm border-t pt-2 text-muted-foreground line-clamp-2">
-            {lead.notes}
+            {lead.created_at && (
+              <CardDescription className="flex items-center text-xs">
+                {formattedDate}
+              </CardDescription>
+            )}
           </div>
-        )}
+
       </CardContent>
 
     </Card>

@@ -16,7 +16,7 @@ export async function getLeads(): Promise<Lead[]> {
       try {
         const { data, error } = await supabase
           .from('leads')
-          .select('id, name, email, phone_number, address, notes, created_at, updated_at')
+          .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
           .order('created_at', { ascending: false });
           
         if (error) {
@@ -54,10 +54,10 @@ export async function getLeads(): Promise<Lead[]> {
         throw error;
       }
       
-      // Assign default status for kanban view
-      return data?.map((lead, index) => ({
+      // Assign default status for kanban view only if status is null
+      return data?.map((lead: any, index) => ({
         ...lead,
-        status: getDefaultStatus(index)
+        status: lead.status || getDefaultStatus(index)
       })) || [];
     }
   } catch (err) {
@@ -73,7 +73,7 @@ export async function searchLeads(query: string): Promise<Lead[]> {
   try {
     let queryBuilder = supabase
       .from('leads')
-      .select('id, name, email, phone_number, address, notes, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
       .or(`name.ilike.%${query}%,email.ilike.%${query}%,phone_number.ilike.%${query}%,address.ilike.%${query}%,notes.ilike.%${query}%`)
       .order('created_at', { ascending: false });
       
@@ -84,10 +84,10 @@ export async function searchLeads(query: string): Promise<Lead[]> {
       throw error;
     }
     
-    // Assign default status for kanban view
-    return data?.map((lead, index) => ({
+    // Assign default status for kanban view only if status is null
+    return data?.map((lead: any, index) => ({
       ...lead,
-      status: getDefaultStatus(index)
+      status: lead.status || getDefaultStatus(index)
     })) || [];
   } catch (err) {
     console.error('Error searching leads:', err);
@@ -102,7 +102,7 @@ export async function getLeadById(id: number): Promise<Lead | null> {
   try {
     let queryBuilder = supabase
       .from('leads')
-      .select('id, name, email, phone_number, address, notes, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
       .eq('id', id)
       .single();
       
@@ -117,7 +117,7 @@ export async function getLeadById(id: number): Promise<Lead | null> {
     if (data) {
       return {
         ...data,
-        status: getDefaultStatus(id % 5) // Use modulo to distribute leads
+        status: data.status || getDefaultStatus(id % 5) // Use existing status or default
       };
     }
     

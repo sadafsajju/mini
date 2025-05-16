@@ -1,4 +1,4 @@
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'closed';
+export type LeadStatus = string;
 
 export interface Lead {
   id: number;
@@ -13,8 +13,9 @@ export interface Lead {
 }
 
 export interface KanbanColumn {
-  id: LeadStatus;
+  id: string;
   title: string;
   color: string;
   leads: Lead[];
+  position?: number;
 }
