@@ -1,5 +1,3 @@
-// This component is not used directly in a client entry file
-
 import React from 'react';
 import { KanbanColumn } from '@/types/leads';
 import KanbanBoardManager from './KanbanBoardManager';
@@ -48,6 +46,21 @@ export default function KanbanBoardManagerSheet({
     }
   };
 
+  // Wrapped callbacks to ensure UI updates immediately
+  const handleAddBoard = async (board: Omit<KanbanColumn, 'leads' | 'id'>) => {
+    const result = await onAddBoard(board);
+    return result;
+  };
+
+  const handleUpdateBoard = async (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => {
+    const result = await onUpdateBoard(id, board);
+    return result;
+  };
+
+  const handleRemoveBoard = async (id: string) => {
+    await onRemoveBoard(id);
+  };
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
@@ -63,9 +76,9 @@ export default function KanbanBoardManagerSheet({
         <div className="py-4">
           <KanbanBoardManager
             boards={boards}
-            onAddBoard={onAddBoard}
-            onUpdateBoard={onUpdateBoard}
-            onRemoveBoard={onRemoveBoard}
+            onAddBoard={handleAddBoard}
+            onUpdateBoard={handleUpdateBoard}
+            onRemoveBoard={handleRemoveBoard}
           />
         </div>
       </SheetContent>

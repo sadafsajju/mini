@@ -50,9 +50,6 @@ export default function KanbanBoard({
       isInitialLoad.current = false;
       return;
     }
-    
-    // We don't call fetchBoards() here to avoid triggering loading states
-    // The boards will be updated through the localLeads state changes
   }, [leads]);
 
   const handleDragStart = (e: React.DragEvent, lead: Lead, column: KanbanColumnType) => {
@@ -151,7 +148,13 @@ export default function KanbanBoard({
     setSourceColumn(null);
   };
 
-  // Board manager visibility is now controlled by the parent component
+  // Re-fetch boards when leads change
+  useEffect(() => {
+    // This will refresh the boards when the component receives new leads
+    if (!isInitialLoad.current) {
+      fetchBoards({ silent: true });
+    }
+  }, [fetchBoards, localLeads]);
 
   return (
     <div className={`w-full ${className}`}>
@@ -176,7 +179,7 @@ export default function KanbanBoard({
         <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden">
           {columns.map(column => (
             <KanbanColumn
-              key={column.id}
+              key={`${column.id}-${column.leads.length}`} // Use leads length in key to force re-render
               column={column}
               onEditLead={onEditLead}
               onContactLead={onContactLead}

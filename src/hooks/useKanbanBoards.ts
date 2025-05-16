@@ -14,6 +14,44 @@ export function useKanbanBoards(leads: Lead[]) {
   const [boards, setBoards] = useState<KanbanColumn[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const leadsRef = useRef(leads);
+
+  // Update the ref when leads change
+  useEffect(() => {
+    leadsRef.current = leads;
+  }, [leads]);
+
+  // Helper function to organize leads into boards
+  const organizeLeadsIntoBoards = useCallback((boardsData: Omit<KanbanColumn, 'leads'>[], leadsData: Lead[]) => {
+    // Create a map of board IDs to make lookup faster
+    const boardMap = new Map(boardsData.map(board => [board.id, board]));
+    
+    // Create a deep copy of leads to avoid modifying the original array
+    const leadsWithCorrectStatus = leadsData.map(lead => ({
+      ...lead,
+    }));
+    
+    // Organize leads into columns
+    const boardsWithLeads = boardsData.map(board => ({
+      ...board,
+      leads: leadsWithCorrectStatus.filter(lead => lead.status === board.id)
+    }));
+    
+    // For leads with no status or status that doesn't match any board, put them in the first board
+    const orphanedLeads = leadsWithCorrectStatus.filter(lead => 
+      !lead.status || !boardMap.has(lead.status)
+    );
+    
+    if (orphanedLeads.length > 0 && boardsWithLeads.length > 0) {
+      // Add orphaned leads to the first board
+      boardsWithLeads[0].leads = [
+        ...boardsWithLeads[0].leads,
+        ...orphanedLeads
+      ];
+    }
+    
+    return boardsWithLeads;
+  }, []);
 
   // Fetch boards from the API
   const fetchBoards = useCallback(async (options?: { silent?: boolean }) => {
@@ -25,40 +63,7 @@ export function useKanbanBoards(leads: Lead[]) {
       setError(null);
       
       const boardsData = await getKanbanBoards();
-      
-      // Create a map of board IDs to make lookup faster
-      const boardMap = new Map(boardsData.map(board => [board.id, board]));
-      
-      // Create a deep copy of leads to avoid modifying the original array
-      const leadsWithCorrectStatus = leads.map(lead => ({
-        ...lead,
-        // If the lead status doesn't match any board ID, it will be handled as orphaned
-      }));
-      
-      // Organize leads into columns
-      const boardsWithLeads = boardsData.map(board => ({
-        ...board,
-        leads: leadsWithCorrectStatus.filter(lead => lead.status === board.id)
-      }));
-      
-      // For leads with no status or status that doesn't match any board, put them in the first board
-      const orphanedLeads = leadsWithCorrectStatus.filter(lead => 
-        !lead.status || !boardMap.has(lead.status)
-      );
-      
-      if (orphanedLeads.length > 0 && boardsWithLeads.length > 0) {
-        // Add orphaned leads to the first board
-        boardsWithLeads[0].leads = [
-          ...boardsWithLeads[0].leads,
-          ...orphanedLeads
-        ];
-        
-        // Update the status of orphaned leads to match the first board
-        // This is important for when they're saved to the database
-        orphanedLeads.forEach(lead => {
-          lead.status = boardsWithLeads[0].id;
-        });
-      }
+      const boardsWithLeads = organizeLeadsIntoBoards(boardsData, leadsRef.current);
       
       setBoards(boardsWithLeads);
     } catch (err) {
@@ -67,7 +72,7 @@ export function useKanbanBoards(leads: Lead[]) {
     } finally {
       setLoading(false);
     }
-  }, [leads]);
+  }, [organizeLeadsIntoBoards]);
 
   // Track initial mount to avoid showing loading spinner on every leads change
   const isInitialMount = useRef(true);
@@ -82,35 +87,38 @@ export function useKanbanBoards(leads: Lead[]) {
       // On subsequent updates to leads, don't show loading spinner
       fetchBoards({ silent: true });
     }
-  }, [fetchBoards]);
+  }, [fetchBoards, leads]);
 
   // Add a new board
   const addBoard = useCallback(async (board: Omit<KanbanColumn, 'leads' | 'id'>) => {
     try {
       setError(null);
-      // Show loading state while adding the board
       setLoading(true);
       
       // Create the board in the database
       const newBoard = await createKanbanBoard(board);
       
+      // Create the new board with leads array
+      const newBoardWithLeads = {
+        ...newBoard,
+        leads: []
+      };
+      
       // Update the local state immediately with the new board
-      setBoards(prev => [
-        ...prev,
-        { ...newBoard, leads: [] }
-      ]);
+      setBoards(prev => [...prev, newBoardWithLeads]);
       
-      // Fetch all boards to ensure everything is in sync
-      // Use silent mode to avoid showing loading spinner again
-      await fetchBoards({ silent: true });
+      // Force a refresh to ensure everything is in sync
+      setTimeout(() => {
+        fetchBoards({ silent: true });
+      }, 100);
       
+      setLoading(false);
       return newBoard;
     } catch (err) {
       console.error('Error adding kanban board:', err);
       setError(err instanceof Error ? err.message : 'Failed to add kanban board');
-      throw err;
-    } finally {
       setLoading(false);
+      throw err;
     }
   }, [fetchBoards]);
 
@@ -120,11 +128,17 @@ export function useKanbanBoards(leads: Lead[]) {
       setError(null);
       const updatedBoard = await updateKanbanBoard(id, board);
       
+      // Immediately update the local state
       setBoards(prev => 
         prev.map(b => 
           b.id === id ? { ...b, ...updatedBoard } : b
         )
       );
+      
+      // Force a refresh to ensure everything is in sync
+      setTimeout(() => {
+        fetchBoards({ silent: true });
+      }, 100);
       
       return updatedBoard;
     } catch (err) {
@@ -132,7 +146,7 @@ export function useKanbanBoards(leads: Lead[]) {
       setError(err instanceof Error ? err.message : 'Failed to update kanban board');
       throw err;
     }
-  }, []);
+  }, [fetchBoards]);
 
   // Remove a board
   const removeBoard = useCallback(async (id: string) => {
@@ -140,13 +154,19 @@ export function useKanbanBoards(leads: Lead[]) {
       setError(null);
       await deleteKanbanBoard(id);
       
+      // Immediately update the local state
       setBoards(prev => prev.filter(b => b.id !== id));
+      
+      // Force a refresh to ensure everything is in sync
+      setTimeout(() => {
+        fetchBoards({ silent: true });
+      }, 100);
     } catch (err) {
       console.error(`Error removing kanban board with ID ${id}:`, err);
       setError(err instanceof Error ? err.message : 'Failed to remove kanban board');
       throw err;
     }
-  }, []);
+  }, [fetchBoards]);
 
   // Reorder boards
   const reorderBoards = useCallback(async (reorderedBoards: KanbanColumn[]) => {

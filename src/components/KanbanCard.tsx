@@ -34,7 +34,7 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
               variant="ghost" 
               size="sm" 
               onClick={() => onEditLead && onEditLead(lead.id)}
-              className="absolute right-2 top-2 h-7 w-7 p-0 opacity-0 bg-background/80 hover:bg-primary/10 group-hover:opacity-100 transition-opacity backdrop-blur-sm dark:bg-background/40">
+              className="absolute right-2 top-2 h-7 w-7 p-0 opacity-0 bg-blue-800/10 hover:bg-blue-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
               <Pencil className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
@@ -44,9 +44,6 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
         </Tooltip>
       </TooltipProvider>
       <CardHeader className="p-3 pb-0">
-        <div className="flex justify-between items-start mb-2">
-          {/* Status is shown by the column itself, no need for a badge */}
-        </div>
         <CardTitle className="text-base font-normal capitalize">{lead.name}</CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-2 pb-2">
@@ -55,14 +52,13 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
         </div>
         {lead.phone_number && (
           <div className="flex items-center text-sm text-muted-foreground">
-            <Phone className="h-3 w-3 mr-2" />
             <span>{lead.phone_number}</span>
           </div>
         )}
 
           <div className="mt-2 text-sm border-t border-border/50 dark:border-muted/20 pt-2 text-muted-foreground line-clamp-2">
             {lead.created_at && (
-              <CardDescription className="flex items-center text-xs">
+              <CardDescription className="flex items-center text-xs py-2">
                 {formattedDate}
               </CardDescription>
             )}

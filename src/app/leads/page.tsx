@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Kanban, Edit, Settings } from 'lucide-react';
+import { Search, Plus, Kanban, Edit, Settings, SquareStack } from 'lucide-react';
 import KanbanBoard from '@/components/KanbanBoard';
 import LeadSheet from '@/components/LeadSheet';
 import KanbanBoardManagerSheet from '@/components/KanbanBoardManagerSheet';
 import { useLeads } from '@/hooks/useLeads';
-import { Lead } from '@/types/leads';
+import { Lead, KanbanColumn } from '@/types/leads'; // Added KanbanColumn import
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
@@ -20,6 +20,8 @@ export default function LeadsPage() {
   const [isLeadSheetOpen, setIsLeadSheetOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>(undefined);
   const [isKanbanManagerOpen, setIsKanbanManagerOpen] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0); // Add a forceUpdate state to trigger re-renders
+  
   const {
     leads,
     loading: leadsLoading,
@@ -27,6 +29,17 @@ export default function LeadsPage() {
     refreshLeads,
     updateLocalLead
   } = useLeads();
+  
+  // Get kanban boards data using the hook
+  const {
+    boards,
+    loading: boardsLoading,
+    error: boardsError,
+    addBoard,
+    updateBoard,
+    removeBoard,
+    fetchBoards
+  } = useKanbanBoards(leads);
   
   const handleEditLead = (id: number) => {
     const lead = leads.find(lead => lead.id === id);
@@ -45,22 +58,30 @@ export default function LeadsPage() {
     setIsLeadSheetOpen(true);
   };
   
-  // Get kanban boards data using the hook
-  const {
-    boards,
-    loading: boardsLoading,
-    error: boardsError,
-    addBoard,
-    updateBoard,
-    removeBoard
-  } = useKanbanBoards(leads);
-  
   const toggleKanbanManager = () => {
     setIsKanbanManagerOpen(!isKanbanManagerOpen);
   };
   
   const handleLeadUpdate = (updatedLead: Lead) => {
     updateLocalLead(updatedLead);
+  };
+
+  // Enhanced callbacks with proper state updates
+  const handleAddBoard = async (board: Omit<KanbanColumn, 'leads' | 'id'>) => {
+    const result = await addBoard(board);
+    setForceUpdate(prev => prev + 1); // Force a re-render
+    return result;
+  };
+
+  const handleUpdateBoard = async (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => {
+    const result = await updateBoard(id, board);
+    setForceUpdate(prev => prev + 1); // Force a re-render
+    return result;
+  };
+
+  const handleRemoveBoard = async (id: string) => {
+    await removeBoard(id);
+    setForceUpdate(prev => prev + 1); // Force a re-render
   };
 
   // Skeleton card component for loading state
@@ -108,6 +129,13 @@ export default function LeadsPage() {
     </div>
   );
 
+  // Effect to refresh boards when forceUpdate changes
+  useEffect(() => {
+    if (forceUpdate > 0) {
+      fetchBoards();
+    }
+  }, [forceUpdate, fetchBoards]);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -135,8 +163,6 @@ export default function LeadsPage() {
             </div>
 
             <div className="flex w-full sm:w-auto gap-2">
-
-              
               <LeadSheet
                 isOpen={isLeadSheetOpen}
                 onOpenChange={setIsLeadSheetOpen}
@@ -161,30 +187,27 @@ export default function LeadsPage() {
                 isOpen={isKanbanManagerOpen}
                 onOpenChange={setIsKanbanManagerOpen}
                 boards={boards}
-                onAddBoard={addBoard}
-                onUpdateBoard={updateBoard}
-                onRemoveBoard={removeBoard}
+                onAddBoard={handleAddBoard}
+                onUpdateBoard={handleUpdateBoard}
+                onRemoveBoard={handleRemoveBoard}
                 trigger={
                   <Button 
                     variant={'ghost'} 
                     onClick={toggleKanbanManager} 
                     className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Manage Boards
+                    <SquareStack className="h-4 w-4" />
                   </Button>
                 }
               />
             </div>
           </div>
 
-          {leadsLoading && (
+          {leadsLoading || boardsLoading ? (
             <div className="flex-1 overflow-hidden">
               <SkeletonBoard />
             </div>
-          )}
-
-          {leadsError && (
+          ) : leadsError ? (
             <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4 mb-6">
               <div className="flex flex-col gap-4">
                 <p className="text-destructive font-medium">{leadsError}</p>
@@ -194,9 +217,7 @@ export default function LeadsPage() {
                 </p>
               </div>
             </div>
-          )}
-
-          {!leadsLoading && !leadsError && (
+          ) : (
             <>
               {leads.length === 0 ? (
                 <div className="text-center py-12 bg-muted/50 rounded-lg border">
@@ -218,6 +239,7 @@ export default function LeadsPage() {
                       onEditLead={handleEditLead}
                       onContactLead={handleContactLead}
                       className="h-full overflow-hidden"
+                      key={`kanban-board-${forceUpdate}`} // Add a key based on forceUpdate
                     />
                   </div>
                 </>

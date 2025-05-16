@@ -54,18 +54,12 @@ export default function KanbanBoardManager({
       };
       
       // Add the board to the database
-      const result = await onAddBoard(newBoardData);
-      
-      // Manually update the local boards state to show the new board immediately
-      // This ensures the UI updates right away without needing a refresh
-      const newBoard = { ...result, leads: [] };
+      await onAddBoard(newBoardData);
       
       // Reset form and close sheet
       setNewBoardTitle('');
       setNewBoardColor('blue');
       setIsAddDialogOpen(false);
-      
-      return result;
     } catch (error) {
       console.error('Failed to add board:', error);
     } finally {
