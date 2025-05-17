@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Lead, KanbanColumn } from '@/types/leads';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Phone, Mail, Flag, ArrowUp, ArrowDown } from 'lucide-react';
+import { Pencil, Phone, Mail, Flag, ArrowUp, ArrowDown, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Table,
@@ -12,6 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import KanbanCardHistory from './KanbanCardHistory';
 
 interface LeadsListProps {
   leads: Lead[];
@@ -20,6 +28,7 @@ interface LeadsListProps {
   onSort?: (column: string) => void;
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
+  onContactLead?: (id: number) => void;
 }
 
 export default function LeadsList({
@@ -29,7 +38,18 @@ export default function LeadsList({
   onSort,
   sortColumn,
   sortDirection,
+  onContactLead,
 }: LeadsListProps) {
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
+  const [selectedLeadName, setSelectedLeadName] = useState<string>("");
+  
+  const handleViewHistory = (leadId: number, leadName: string) => {
+    setSelectedLeadId(leadId);
+    setSelectedLeadName(leadName);
+    setHistoryDialogOpen(true);
+  };
+
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
@@ -188,7 +208,18 @@ export default function LeadsList({
                     <Button 
                       variant="ghost" 
                       size="sm" 
+                      onClick={() => handleViewHistory(lead.id, lead.name)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="View History"
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
                       onClick={() => onEditLead && onEditLead(lead.id)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Edit Lead"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -199,6 +230,19 @@ export default function LeadsList({
           })}
         </TableBody>
       </Table>
+
+      {/* History Sheet */}
+      <Sheet open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} side="right">
+        <SheetContent className="overflow-y-auto w-full sm:max-w-md">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Card Movement Timeline</SheetTitle>
+            <SheetDescription>
+              Complete history for "{selectedLeadName}"
+            </SheetDescription>
+          </SheetHeader>
+          {selectedLeadId && <KanbanCardHistory leadId={selectedLeadId} />}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
