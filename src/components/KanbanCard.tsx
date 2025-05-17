@@ -119,8 +119,8 @@ export default function KanbanCard({ lead, onEditLead, onContactLead, onLeadUpda
       </TooltipProvider>
       
       {/* History Sheet */}
-      <Sheet open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} side="right">
-        <SheetContent className="overflow-y-auto w-full sm:max-w-md">
+      <Sheet open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <SheetContent side="right" className="overflow-y-auto w-full sm:max-w-md">
           <SheetHeader className="mb-4">
             <SheetTitle>Card Movement Timeline</SheetTitle>
             <SheetDescription>

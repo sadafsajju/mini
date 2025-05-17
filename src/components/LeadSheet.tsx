@@ -87,6 +87,7 @@ export default function LeadSheet({
   // Update form values when lead prop changes
   useEffect(() => {
     if (lead) {
+      // Only set form values when editing an existing lead
       form.reset({
         name: lead.name,
         email: lead.email,
@@ -95,6 +96,17 @@ export default function LeadSheet({
         notes: lead.notes || '',
         status: lead.status as "new" | "contacted" | "qualified" | "proposal" | "closed" || 'new',
         priority: lead.priority
+      });
+    } else {
+      // Reset to empty values when creating a new lead
+      form.reset({
+        name: '',
+        email: '',
+        phone_number: '',
+        address: '',
+        notes: '',
+        status: 'new',
+        priority: undefined
       });
     }
   }, [lead, form]);
@@ -112,8 +124,19 @@ export default function LeadSheet({
     if (onOpenChange) {
       onOpenChange(newOpen);
     }
+    
+    // Reset form when closing the sheet
     if (!newOpen) {
-      form.reset();
+      // Clear the form completely with empty values
+      form.reset({
+        name: '',
+        email: '',
+        phone_number: '',
+        address: '',
+        notes: '',
+        status: 'new',
+        priority: undefined
+      });
     }
   };
 

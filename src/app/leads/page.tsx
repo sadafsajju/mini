@@ -100,8 +100,18 @@ export default function LeadsPage() {
   };
 
   const handleAddNewLead = () => {
-    setSelectedLead(undefined);
-    setIsLeadSheetOpen(true);
+    // First close any open lead sheet to ensure form reset happens
+    if (isLeadSheetOpen) {
+      setIsLeadSheetOpen(false);
+      // Use setTimeout to ensure state updates before reopening
+      setTimeout(() => {
+        setSelectedLead(undefined);
+        setIsLeadSheetOpen(true);
+      }, 10);
+    } else {
+      setSelectedLead(undefined);
+      setIsLeadSheetOpen(true);
+    }
   };
   
   const toggleKanbanManager = () => {
