@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { 
   Search, 
   Plus, 
-  Kanban, 
   SquareStack, 
   SlidersHorizontal, 
   ArrowUpDown, 
@@ -15,6 +14,8 @@ import {
   Flag 
 } from 'lucide-react';
 import KanbanBoard from '@/components/KanbanBoard';
+import LeadsGrid from '@/components/LeadsGrid';
+import LeadsList from '@/components/LeadsList';
 import LeadSheet from '@/components/LeadSheet';
 import KanbanBoardManagerSheet from '@/components/KanbanBoardManagerSheet';
 import { useLeads } from '@/hooks/useLeads';
@@ -22,6 +23,7 @@ import { Lead, KanbanColumn } from '@/types/leads';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
+import ViewToggle, { ViewType } from '@/components/ViewToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +45,13 @@ export default function LeadsPage() {
   const [isKanbanManagerOpen, setIsKanbanManagerOpen] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
   const [filterType, setFilterType] = useState<LeadFilterType>('none');
+  // Add state for the current view
+  const [currentView, setCurrentView] = useState<ViewType>('kanban');
+  // Add state for list view sorting
+  const [sortColumn, setSortColumn] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  // Track initial page load to only show loading indicator once
+  const hasLoadedInitially = React.useRef(false);
   
   const {
     leads,
@@ -50,7 +59,9 @@ export default function LeadsPage() {
     error: leadsError,
     refreshLeads,
     updateLocalLead,
-    removeLocalLead
+    removeLocalLead,
+    setSearchTerm: handleSearch,
+    isInitialLoad: isLeadsInitialLoad
   } = useLeads();
   
   // Get kanban boards data using the hook
@@ -64,8 +75,16 @@ export default function LeadsPage() {
     fetchBoards
   } = useKanbanBoards(leads);
   
-  // Only show loading spinner on initial load, not during actions
-  const showLoading = leadsLoading && boards.length === 0;
+  // Only show loading spinner on the very first load of the page
+  // This prevents flickering when switching views or refreshing data
+  const showLoading = !hasLoadedInitially.current && (leadsLoading || boardsLoading) && leads.length === 0;
+  
+  // Mark as initially loaded once we have leads
+  useEffect(() => {
+    if (leads.length > 0 && !leadsLoading) {
+      hasLoadedInitially.current = true;
+    }
+  }, [leads, leadsLoading]);
   
   const handleEditLead = (id: number) => {
     const lead = leads.find(lead => lead.id === id);
@@ -137,6 +156,111 @@ export default function LeadsPage() {
     }, 100);
   };
 
+  // Handle view toggle
+  const handleViewChange = (view: ViewType) => {
+    setCurrentView(view);
+  };
+
+  // Handle sort change for list view
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Apply filters and sorting to leads for card and list views
+  const filteredAndSortedLeads = React.useMemo(() => {
+    if (currentView === 'kanban') {
+      return leads; // No need to filter here as KanbanBoard handles it
+    }
+    
+    let filtered = [...leads];
+    
+    // Apply filters based on filterType
+    switch (filterType) {
+      case 'priority-high-first':
+        filtered.sort((a, b) => {
+          // Handle undefined priorities
+          const priorityA = a.priority || 'low';
+          const priorityB = b.priority || 'low';
+          const priorityWeight = {
+            'high': 3,
+            'medium': 2,
+            'low': 1
+          };
+          return priorityWeight[priorityB as keyof typeof priorityWeight] - 
+                 priorityWeight[priorityA as keyof typeof priorityWeight];
+        });
+        break;
+      case 'priority-low-first':
+        filtered.sort((a, b) => {
+          // Handle undefined priorities
+          const priorityA = a.priority || 'low';
+          const priorityB = b.priority || 'low';
+          const priorityWeight = {
+            'high': 3,
+            'medium': 2,
+            'low': 1
+          };
+          return priorityWeight[priorityA as keyof typeof priorityWeight] - 
+                 priorityWeight[priorityB as keyof typeof priorityWeight];
+        });
+        break;
+      case 'date-newest':
+        filtered.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case 'date-oldest':
+        filtered.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateA - dateB;
+        });
+        break;
+      default:
+        // Apply custom sort if we're in list view
+        if (currentView === 'list' && sortColumn) {
+          filtered.sort((a, b) => {
+            let valA = a[sortColumn as keyof Lead] || '';
+            let valB = b[sortColumn as keyof Lead] || '';
+            
+            // Special handling for dates
+            if (sortColumn === 'created_at' || sortColumn === 'updated_at') {
+              valA = valA ? new Date(valA as string).getTime() : 0;
+              valB = valB ? new Date(valB as string).getTime() : 0;
+            }
+            
+            // Special handling for priorities
+            if (sortColumn === 'priority') {
+              const priorityWeight = {
+                'high': 3,
+                'medium': 2,
+                'low': 1,
+                '': 0
+              };
+              valA = priorityWeight[(valA as string) || ''] || 0;
+              valB = priorityWeight[(valB as string) || ''] || 0;
+            }
+            
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+          });
+        }
+        break;
+    }
+    
+    return filtered;
+  }, [leads, filterType, currentView, sortColumn, sortDirection]);
+
   // Get the filter label for display
   const getFilterLabel = () => {
     switch (filterType) {
@@ -153,7 +277,7 @@ export default function LeadsPage() {
     }
   };
 
-  // Skeleton card component for loading state
+  // Skeleton components for loading states - only used at the very first load
   const SkeletonCard = () => (
     <div className="mb-3 shadow-none border bg-card/30 dark:bg-card/20 dark:border-muted/20 rounded-xl p-3">
       <div className="flex flex-col space-y-2">
@@ -167,7 +291,6 @@ export default function LeadsPage() {
     </div>
   );
 
-  // Skeleton column component for loading state
   const SkeletonColumn = () => (
     <div className="bg-muted/60 dark:bg-muted/20 rounded-2xl min-w-64 w-72 flex-shrink-0 h-[calc(100vh-11rem)] flex flex-col">
       <div className="flex items-center justify-between mb-3 px-4 pt-3">
@@ -188,13 +311,61 @@ export default function LeadsPage() {
     </div>
   );
 
-  // Skeleton board with multiple columns
   const SkeletonBoard = () => (
-    <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden h-full">
+    <div className="flex gap-4 pb-6 pt-2 px-2 w-full min-w-full overflow-x-auto overflow-y-hidden h-full">
       <SkeletonColumn />
       <SkeletonColumn />
       <SkeletonColumn />
       <SkeletonColumn />
+    </div>
+  );
+
+  const SkeletonGrid = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="bg-card dark:bg-card/80 shadow-none border dark:border-muted/20 rounded-xl p-4">
+          <div className="flex flex-col space-y-3">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <div className="flex justify-end gap-2 pt-2">
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const SkeletonList = () => (
+    <div className="w-full">
+      <div className="flex p-4 border-b">
+        <Skeleton className="h-6 w-32 mr-6" />
+        <Skeleton className="h-6 w-48 mr-6" />
+        <Skeleton className="h-6 w-32 mr-6" />
+        <Skeleton className="h-6 w-24 mr-6" />
+        <Skeleton className="h-6 w-20 mr-6" />
+        <Skeleton className="h-6 w-20 mr-6" />
+        <div className="flex-1 flex justify-end">
+          <Skeleton className="h-6 w-36" />
+        </div>
+      </div>
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className="flex items-center p-4 border-b">
+          <Skeleton className="h-5 w-32 mr-6" />
+          <Skeleton className="h-5 w-48 mr-6" />
+          <Skeleton className="h-5 w-32 mr-6" />
+          <Skeleton className="h-5 w-24 mr-6" />
+          <Skeleton className="h-5 w-20 mr-6" />
+          <Skeleton className="h-5 w-20 mr-6" />
+          <div className="flex-1 flex justify-end gap-2">
+            <Skeleton className="h-9 w-16" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 
@@ -205,10 +376,28 @@ export default function LeadsPage() {
     }
   }, [forceUpdate, fetchBoards]);
 
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    handleSearch(value);
+  };
+
+  // Content wrapper with consistent width constraint
+  const ViewContainer = ({ children }: { children: React.ReactNode }) => {
+    return (
+      <div className="w-full h-full flex-1 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-auto">
+          {children}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <div className="container-fluid mx-auto p-4 flex-1 overflow-hidden flex flex-col">
+      <div className="container mx-auto p-4 flex-1 overflow-hidden flex flex-col">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h1 className="text-3xl font-normal">Leads</h1>
         </div>
@@ -220,15 +409,17 @@ export default function LeadsPage() {
               <Input
                 placeholder="Search leads..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 className="pl-8 w-full sm:w-64 border-none bg-muted"
               />
             </div>
 
+            {/* Use the ViewToggle component */}
             <div className="flex items-center gap-1 px-3 py-2 rounded-md">
-              <Button variant={'ghost'} className='text-muted-foreground'>
-                <Kanban className="h-4 w-4" />
-              </Button>
+              <ViewToggle 
+                currentView={currentView} 
+                onViewChange={handleViewChange} 
+              />
             </div>
 
             <div className="flex w-full sm:w-auto gap-2">
@@ -251,28 +442,31 @@ export default function LeadsPage() {
               />
             </div>
 
-            <div>
-              <KanbanBoardManagerSheet
-                isOpen={isKanbanManagerOpen}
-                onOpenChange={setIsKanbanManagerOpen}
-                boards={boards}
-                onAddBoard={handleAddBoard}
-                onUpdateBoard={handleUpdateBoard}
-                onRemoveBoard={handleRemoveBoard}
-                trigger={
-                  <Button 
-                    variant={'ghost'} 
-                    onClick={toggleKanbanManager} 
-                    className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <SquareStack className="h-4 w-4" />
-                  </Button>
-                }
-              />
-            </div>
+            {/* Only show kanban manager button in kanban view */}
+            {currentView === 'kanban' && (
+              <div>
+                <KanbanBoardManagerSheet
+                  isOpen={isKanbanManagerOpen}
+                  onOpenChange={setIsKanbanManagerOpen}
+                  boards={boards}
+                  onAddBoard={handleAddBoard}
+                  onUpdateBoard={handleUpdateBoard}
+                  onRemoveBoard={handleRemoveBoard}
+                  trigger={
+                    <Button 
+                      variant={'ghost'} 
+                      onClick={toggleKanbanManager} 
+                      className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <SquareStack className="h-4 w-4" />
+                    </Button>
+                  }
+                />
+              </div>
+            )}
 
-                        {/* Filter Dropdown */}
-                        <div className="flex items-center mr-2">
+            {/* Filter Dropdown */}
+            <div className="flex items-center mr-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -334,10 +528,13 @@ export default function LeadsPage() {
             
           </div>
 
+          {/* Display loading state only on initial page load, never when switching views */}
           {showLoading ? (
-            <div className="flex-1 overflow-hidden">
-              <SkeletonBoard />
-            </div>
+            <ViewContainer>
+              {currentView === 'kanban' && <SkeletonBoard />}
+              {currentView === 'card' && <SkeletonGrid />}
+              {currentView === 'list' && <SkeletonList />}
+            </ViewContainer>
           ) : leadsError ? (
             <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4 mb-6">
               <div className="flex flex-col gap-4">
@@ -362,18 +559,42 @@ export default function LeadsPage() {
                   </Button>
                 </div>
               ) : (
-                <>
-                  <div className="flex-1 overflow-hidden">
+                <ViewContainer>
+                  {currentView === 'kanban' && (
                     <KanbanBoard 
                       leads={leads}
                       onLeadUpdate={handleLeadUpdate}
                       onEditLead={handleEditLead}
                       onContactLead={handleContactLead}
                       filterType={filterType}
-                      className="h-full overflow-hidden"
+                      className="h-full"
                     />
-                  </div>
-                </>
+                  )}
+                  
+                  {currentView === 'card' && (
+                    <div className="p-4 h-full">
+                      <LeadsGrid 
+                        leads={filteredAndSortedLeads}
+                        onEditLead={handleEditLead}
+                        onContactLead={handleContactLead}
+                      />
+                    </div>
+                  )}
+                  
+                  {currentView === 'list' && (
+                    <div className="p-4 h-full">
+                      <LeadsList 
+                        leads={filteredAndSortedLeads}
+                        boards={boards} // Pass the boards data to the list view
+                        onEditLead={handleEditLead}
+                        onContactLead={handleContactLead}
+                        onSort={handleSort}
+                        sortColumn={sortColumn}
+                        sortDirection={sortDirection}
+                      />
+                    </div>
+                  )}
+                </ViewContainer>
               )}
             </>
           )}

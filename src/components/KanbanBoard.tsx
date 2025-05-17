@@ -39,6 +39,8 @@ export default function KanbanBoard({
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
+  // Track if we've had a successful load to prevent showing loading spinners
+  const hasLoadedBefore = React.useRef(false);
   
   // Use the custom hook to manage kanban boards
   const { 
@@ -53,6 +55,11 @@ export default function KanbanBoard({
 
   // Apply filters to leads in each column
   const columns = React.useMemo(() => {
+    // If boards have loaded successfully, mark our ref
+    if (originalColumns.length > 0) {
+      hasLoadedBefore.current = true;
+    }
+
     return originalColumns.map(column => {
       let filteredLeads = [...column.leads];
       
@@ -100,8 +107,9 @@ export default function KanbanBoard({
     });
   }, [originalColumns, filterType]);
 
-  // Only show loading spinner on initial load when no columns are available
-  const shouldShowLoading = boardsLoading && columns.length === 0;
+  // Only show loading spinner on very first load when no data exists yet
+  // Never show loading indicator if we've successfully loaded data before
+  const shouldShowLoading = !hasLoadedBefore.current && boardsLoading && columns.length === 0;
 
   // Keep local state of leads for smooth drag-and-drop even when API updates fail
   // We use a ref to track if this is the initial load to avoid unnecessary refreshes
@@ -272,6 +280,24 @@ export default function KanbanBoard({
       fetchBoards({ silent: true });
     }
   }, [fetchBoards, localLeads]);
+
+  // Display empty columns instead of loading spinner if we're loading but have seen data before
+  if (!shouldShowLoading && boardsLoading && columns.length === 0 && hasLoadedBefore.current) {
+    return (
+      <div className={`w-full ${className}`}>
+        <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden h-full">
+          <div className="bg-muted/60 dark:bg-muted/20 rounded-2xl min-w-64 w-72 flex-shrink-0 h-[calc(100vh-11rem)] flex flex-col">
+            <div className="flex items-center justify-between mb-3 px-4 pt-3">
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full mr-2 bg-blue-500"></div>
+                <span>New</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
