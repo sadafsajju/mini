@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Lead } from '@/types/leads';
+import { ArrowRight, MoveRight } from 'lucide-react';
 
 interface KanbanCardMoveDialogProps {
   isOpen: boolean;
@@ -46,11 +47,15 @@ export default function KanbanCardMoveDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Card Movement Notes</DialogTitle>
+          <DialogTitle>
+            <div className='flex items-center'>
+            Moving: {fromColumn} <MoveRight className='mx-2' /> {toColumn}
+            </div>
+            </DialogTitle>
           <DialogDescription>
-            Add notes about why you're moving this card from "{fromColumn}" to "{toColumn}".
+            Add notes about why you're moving this lead.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -78,7 +83,7 @@ export default function KanbanCardMoveDialog({
                 Saving...
               </span>
             ) : (
-              'Save Notes'
+              'Move'
             )}
           </Button>
         </DialogFooter>
