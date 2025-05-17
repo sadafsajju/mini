@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SkeletonLoader from './SkeletonLoader';
 import { KanbanColumn as KanbanColumnType, Lead } from '@/types/leads';
 import KanbanColumn from './KanbanColumn';
 import KanbanBoardManager from './KanbanBoardManager';
@@ -375,9 +376,7 @@ export default function KanbanBoard({
       )}
 
       {shouldShowLoading ? (
-        <div className="flex justify-center items-center p-8">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        </div>
+        <SkeletonLoader variant="kanban" />
       ) : boardsError ? (
         <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4 mb-6">
           <p className="text-destructive font-medium">{boardsError}</p>
