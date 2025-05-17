@@ -72,6 +72,7 @@ export default function LeadsPage() {
     addBoard,
     updateBoard,
     removeBoard,
+    reorderBoards,
     fetchBoards
   } = useKanbanBoards(leads);
   
@@ -154,6 +155,16 @@ export default function LeadsPage() {
     setTimeout(() => {
       fetchBoards({ silent: true });
     }, 100);
+  };
+
+  // Handle reordering boards
+  const handleReorderBoards = async (reorderedBoards: KanbanColumn[]) => {
+    try {
+      // Call the reorderBoards function from the hook - it now handles its own refreshing
+      await reorderBoards(reorderedBoards);
+    } catch (error) {
+      console.error('Failed to reorder boards:', error);
+    }
   };
 
   // Handle view toggle
@@ -452,6 +463,7 @@ export default function LeadsPage() {
                   onAddBoard={handleAddBoard}
                   onUpdateBoard={handleUpdateBoard}
                   onRemoveBoard={handleRemoveBoard}
+                  onReorderBoards={handleReorderBoards}
                   trigger={
                     <Button 
                       variant={'ghost'} 

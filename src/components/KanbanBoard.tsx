@@ -58,6 +58,7 @@ export default function KanbanBoard({
     addBoard,
     updateBoard,
     removeBoard,
+    reorderBoards,
     fetchBoards
   } = useKanbanBoards(localLeads);
 
@@ -369,6 +370,7 @@ export default function KanbanBoard({
           onAddBoard={addBoard}
           onUpdateBoard={updateBoard}
           onRemoveBoard={removeBoard}
+          onReorderBoards={reorderBoards}
         />
       )}
 

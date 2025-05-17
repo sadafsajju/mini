@@ -17,6 +17,7 @@ interface KanbanBoardManagerSheetProps {
   onAddBoard: (board: Omit<KanbanColumn, 'leads' | 'id'>) => Promise<any>;
   onUpdateBoard: (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => Promise<any>;
   onRemoveBoard: (id: string) => Promise<void>;
+  onReorderBoards?: (boards: KanbanColumn[]) => Promise<void>;
   trigger?: React.ReactNode;
 }
 
@@ -27,6 +28,7 @@ export default function KanbanBoardManagerSheet({
   onAddBoard,
   onUpdateBoard,
   onRemoveBoard,
+  onReorderBoards,
   trigger
 }: KanbanBoardManagerSheetProps) {
   const [open, setOpen] = React.useState(false);
@@ -61,6 +63,12 @@ export default function KanbanBoardManagerSheet({
     await onRemoveBoard(id);
   };
 
+  const handleReorderBoards = async (reorderedBoards: KanbanColumn[]) => {
+    if (onReorderBoards) {
+      await onReorderBoards(reorderedBoards);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
@@ -79,6 +87,7 @@ export default function KanbanBoardManagerSheet({
             onAddBoard={handleAddBoard}
             onUpdateBoard={handleUpdateBoard}
             onRemoveBoard={handleRemoveBoard}
+            onReorderBoards={onReorderBoards ? handleReorderBoards : undefined}
           />
         </div>
       </SheetContent>

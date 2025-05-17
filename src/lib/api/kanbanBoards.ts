@@ -125,34 +125,36 @@ export async function deleteKanbanBoard(id: string): Promise<void> {
  */
 export async function updateKanbanBoardPositions(boards: { id: string, position: number }[]): Promise<void> {
   try {
-    // Use a transaction to update all positions
-    const { error } = await supabase.rpc('update_kanban_board_positions', {
-      boards_data: boards
-    });
-    
-    if (error) {
-      console.error('Error updating kanban board positions:', error);
-      throw error;
+    // Try using RPC function first
+    try {
+      const { error } = await supabase.rpc('update_kanban_board_positions', {
+        boards_data: boards
+      });
+      
+      if (!error) {
+        // RPC worked, return early
+        return;
+      }
+    } catch (rpcError) {
+      // RPC failed, will fall back to individual updates
+      console.log('RPC not available, falling back to individual updates');
+    }
+
+    // Individual updates as fallback
+    for (const board of boards) {
+      const { error } = await supabase
+        .from('kanban_boards')
+        .update({ position: board.position })
+        .eq('id', board.id);
+        
+      if (error) {
+        console.error(`Error updating position for board ${board.id}:`, error);
+        throw error;
+      }
     }
   } catch (err) {
     console.error('Error updating kanban board positions:', err);
-    
-    // If the RPC function doesn't exist, update each board individually
-    if (err instanceof Error && err.message?.includes('does not exist')) {
-      try {
-        for (const board of boards) {
-          await supabase
-            .from('kanban_boards')
-            .update({ position: board.position })
-            .eq('id', board.id);
-        }
-      } catch (updateErr) {
-        console.error('Error updating kanban board positions individually:', updateErr);
-        throw new Error('Failed to update kanban board positions');
-      }
-    } else {
-      throw new Error('Failed to update kanban board positions');
-    }
+    throw new Error('Failed to update kanban board positions');
   }
 }
 

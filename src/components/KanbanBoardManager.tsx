@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { KanbanColumn } from '@/types/leads';
-import { X, Plus, Pencil } from 'lucide-react';
+import { X, Plus, Pencil, GripVertical } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 interface KanbanBoardManagerProps {
@@ -13,6 +13,7 @@ interface KanbanBoardManagerProps {
   onAddBoard: (board: Omit<KanbanColumn, 'leads' | 'id'>) => Promise<any>;
   onUpdateBoard: (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => Promise<any>;
   onRemoveBoard: (id: string) => Promise<void>;
+  onReorderBoards?: (boards: KanbanColumn[]) => Promise<void>;
 }
 
 // Available colors for Kanban boards
@@ -29,7 +30,8 @@ export default function KanbanBoardManager({
   boards, 
   onAddBoard, 
   onUpdateBoard, 
-  onRemoveBoard 
+  onRemoveBoard,
+  onReorderBoards 
 }: KanbanBoardManagerProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -39,6 +41,7 @@ export default function KanbanBoardManager({
   const [editBoardTitle, setEditBoardTitle] = useState('');
   const [editBoardColor, setEditBoardColor] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draggedBoardId, setDraggedBoardId] = useState<string | null>(null);
 
   // Handle adding a new board
   const handleAddBoard = async () => {
@@ -109,6 +112,47 @@ export default function KanbanBoardManager({
     }
   };
 
+  // Handle starting drag
+  const handleDragStart = (id: string) => {
+    setDraggedBoardId(id);
+  };
+
+  // Handle dropping
+  const handleDrop = useCallback((dropTargetId: string) => {
+    if (draggedBoardId !== null && draggedBoardId !== dropTargetId && onReorderBoards) {
+      const draggedIndex = boards.findIndex(board => board.id === draggedBoardId);
+      const dropIndex = boards.findIndex(board => board.id === dropTargetId);
+      
+      if (draggedIndex !== -1 && dropIndex !== -1) {
+        // Create a new array with the reordered boards
+        const reorderedBoards = [...boards];
+        const [draggedBoard] = reorderedBoards.splice(draggedIndex, 1);
+        reorderedBoards.splice(dropIndex, 0, draggedBoard);
+        
+        // Reset drag state
+        setDraggedBoardId(null);
+        
+        // Call the reorder function
+        onReorderBoards(reorderedBoards).catch(error => {
+          console.error('Failed to reorder boards:', error);
+        });
+      }
+    }
+  }, [boards, draggedBoardId, onReorderBoards]);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+    e.preventDefault(); // Allow dropping by preventing default
+    // Add a visual indicator for the drop target
+    if (draggedBoardId !== null && draggedBoardId !== id) {
+      e.currentTarget.classList.add('border-2', 'border-primary', 'border-dashed');
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Remove the visual indicator when dragging out
+    e.currentTarget.classList.remove('border-2', 'border-primary', 'border-dashed');
+  };
+
   return (
     <div>
       <Sheet open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -167,9 +211,24 @@ export default function KanbanBoardManager({
         {boards.map((board) => (
           <div 
             key={board.id} 
-            className="flex items-center justify-between px-4 py-2 bg-muted/60 rounded-xl"
+            className={`flex items-center justify-between px-4 py-2 bg-muted/60 rounded-xl ${
+              draggedBoardId === board.id ? 'opacity-50' : ''
+            }`}
+            draggable={!!onReorderBoards}
+            onDragStart={() => handleDragStart(board.id)}
+            onDragOver={(e) => handleDragOver(e, board.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={() => handleDrop(board.id)}
           >
             <div className="flex items-center">
+              {onReorderBoards && (
+                <div 
+                  className="cursor-grab mr-2 hover:text-primary" 
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <GripVertical className="h-4 w-4" />
+                </div>
+              )}
               <div className={`w-3 h-3 rounded-full bg-${board.color}-500 mr-2`}></div>
               <span>{board.title}</span>
               <span className="ml-2 text-xs text-muted-foreground">({board.leads.length})</span>

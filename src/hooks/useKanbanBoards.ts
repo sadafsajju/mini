@@ -166,14 +166,17 @@ export function useKanbanBoards(leads: Lead[]) {
         position: index
       }));
       
-      // Update positions in the database
+      // Update positions in the database - await to ensure it completes
       await updateKanbanBoardPositions(positionUpdates);
+      
+      // After successful update, refresh boards silently to ensure UI is in sync
+      await fetchBoards({ silent: true });
     } catch (err) {
       console.error('Error reordering kanban boards:', err);
       setError(err instanceof Error ? err.message : 'Failed to reorder kanban boards');
       
       // Refresh boards on error to ensure UI is in sync with the database
-      fetchBoards({ silent: true });
+      await fetchBoards({ silent: true });
       throw err;
     }
   }, [fetchBoards]);
