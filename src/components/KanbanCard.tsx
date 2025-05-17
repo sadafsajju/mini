@@ -1,19 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Lead } from '@/types/leads';
-import { Pencil, Phone } from 'lucide-react';
+import { Pencil, Phone, Flag, ChevronDown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { updateLead } from '@/lib/api/leads';
 
 interface KanbanCardProps {
   lead: Lead;
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
+  onLeadUpdate?: (updatedLead: Lead) => void;
 }
 
-export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCardProps) {
+export default function KanbanCard({ lead, onEditLead, onContactLead, onLeadUpdate }: KanbanCardProps) {
+  const [priority, setPriority] = useState<string | undefined>(lead.priority);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
   const initials = lead.name
     .split(' ')
     .map(name => name[0])
@@ -24,6 +30,47 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
   const formattedDate = lead.created_at 
     ? formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })
     : '';
+
+  // Priority configuration
+  const priorityColors = {
+    low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  };
+  
+  const priorityIcons = {
+    low: <Flag className="h-3 w-3" />,
+    medium: <Flag className="h-3 w-3" />,
+    high: <Flag className="h-3 w-3" />,
+  };
+
+  // Handle priority change
+  const handlePriorityChange = async (newPriority: string) => {
+    if (newPriority === priority) return;
+    
+    try {
+      setIsUpdating(true);
+      
+      // Update local state immediately for better UX
+      setPriority(newPriority);
+      
+      // Update the lead in the database
+      const updatedLead = await updateLead(lead.id, { 
+        priority: newPriority as 'low' | 'medium' | 'high' 
+      });
+      
+      // Notify parent component about the update
+      if (onLeadUpdate) {
+        onLeadUpdate(updatedLead);
+      }
+    } catch (error) {
+      console.error('Error updating lead priority:', error);
+      // Revert to original priority if update fails
+      setPriority(lead.priority);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <Card className="mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
@@ -44,7 +91,9 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
         </Tooltip>
       </TooltipProvider>
       <CardHeader className="p-3 pb-0">
-        <CardTitle className="text-base font-normal capitalize">{lead.name}</CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-base font-normal capitalize">{lead.name}</CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="p-3 pt-2 pb-2">
         <div className="flex items-center text-sm text-muted-foreground mb-1">
@@ -56,16 +105,52 @@ export default function KanbanCard({ lead, onEditLead, onContactLead }: KanbanCa
           </div>
         )}
 
-          <div className="mt-2 text-sm border-t border-border/50 dark:border-muted/20 pt-2 text-muted-foreground line-clamp-2">
-            {lead.created_at && (
-              <CardDescription className="flex items-center text-xs py-2">
-                {formattedDate}
-              </CardDescription>
-            )}
-          </div>
-
+        <div className="mt-2 text-sm border-t border-border/50 dark:border-muted/20 pt-2 text-muted-foreground line-clamp-2">
+          <CardDescription className="flex items-center justify-between text-xs py-2">
+            <span>{formattedDate}</span>
+            
+            {/* Priority Dropdown */}
+            <Select
+              value={priority}
+              onValueChange={handlePriorityChange}
+              disabled={isUpdating}
+            >
+              <SelectTrigger 
+                className={`w-24 h-6 px-2 text-xs border-none ${priority ? priorityColors[priority as keyof typeof priorityColors] : ''}`}
+              >
+                <SelectValue placeholder="Set priority">
+                  {priority && (
+                    <div className="flex items-center gap-1">
+                      {priorityIcons[priority as keyof typeof priorityIcons]}
+                      <span>{priority}</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low" className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <Flag className="h-3 w-3 text-blue-600" />
+                    <span>Low</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="medium" className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <Flag className="h-3 w-3 text-yellow-600" />
+                    <span>Medium</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="high" className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <Flag className="h-3 w-3 text-red-600" />
+                    <span>High</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </CardDescription>
+        </div>
       </CardContent>
-
     </Card>
   );
 }

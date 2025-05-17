@@ -15,7 +15,7 @@ export async function getLeads(): Promise<Lead[]> {
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
+        .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
         .order('created_at', { ascending: false });
         
       if (error) {
@@ -41,6 +41,7 @@ export async function getLeads(): Promise<Lead[]> {
           address: lead.address || '',
           notes: lead.notes || '',
           status: (lead as any).status || 'new', // Use type assertion for potentially missing status
+          priority: (lead as any).priority, // Include priority field
           created_at: lead.created_at,
           updated_at: lead.updated_at
         };
@@ -69,7 +70,7 @@ export async function searchLeads(query: string): Promise<Lead[]> {
   try {
     let queryBuilder = supabase
       .from('leads')
-      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .or(`name.ilike.%${query}%,email.ilike.%${query}%,phone_number.ilike.%${query}%,address.ilike.%${query}%,notes.ilike.%${query}%`)
       .order('created_at', { ascending: false });
       
@@ -91,6 +92,7 @@ export async function searchLeads(query: string): Promise<Lead[]> {
         address: lead.address || '',
         notes: lead.notes || '',
         status: (lead as any).status || 'new', // Use type assertion for potentially missing status
+        priority: (lead as any).priority, // Include priority field
         created_at: lead.created_at,
         updated_at: lead.updated_at
       };
@@ -109,7 +111,7 @@ export async function getLeadById(id: number): Promise<Lead | null> {
   try {
     let queryBuilder = supabase
       .from('leads')
-      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .eq('id', id)
       .single();
       
@@ -124,7 +126,8 @@ export async function getLeadById(id: number): Promise<Lead | null> {
     if (data) {
       return {
         ...data,
-        status: data.status || 'new' // Fallback to 'new' if status is null
+        status: data.status || 'new', // Fallback to 'new' if status is null
+        priority: data.priority // Include priority field
       };
     }
     
@@ -149,7 +152,7 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
     const { data, error } = await supabase
       .from('leads')
       .insert(leadData)
-      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .single();
       
     if (error) {
@@ -164,13 +167,14 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
           email: lead.email,
           phone_number: lead.phone_number,
           address: lead.address,
-          notes: lead.notes
+          notes: lead.notes,
+          priority: lead.priority // Keep priority in fallback data
         };
         
         const { data: retryData, error: retryError } = await supabase
           .from('leads')
           .insert(fallbackData)
-          .select('id, name, email, phone_number, address, notes, created_at, updated_at')
+          .select('id, name, email, phone_number, address, notes, priority, created_at, updated_at')
           .single();
           
         if (retryError) {
@@ -178,14 +182,6 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
           throw new Error(`Failed to create lead: ${retryError.message}`);
         }
         
-        if (!retryData) {
-          throw new Error('Failed to create lead: No data returned');
-        }
-        
-        // Update the lead after creation to set the status
-        await updateLeadStatus(retryData.id, lead.status || 'new');
-        
-        // Return with status, properly typed
         if (!retryData) {
           throw new Error('Failed to create lead: No data returned');
         }
@@ -201,6 +197,7 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
           address: retryData.address || '',
           notes: retryData.notes || '',
           status: lead.status || 'new',
+          priority: retryData.priority || lead.priority, // Include priority field
           created_at: retryData.created_at,
           updated_at: retryData.updated_at
         };
@@ -216,11 +213,6 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
       throw new Error('Failed to create lead: No data returned');
     }
     
-    // Return lead with status, properly typed
-    if (!data) {
-      throw new Error('Failed to create lead: No data returned');
-    }
-    
     const typedLead: Lead = {
       id: data.id,
       name: data.name,
@@ -229,6 +221,7 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
       address: data.address || '',
       notes: data.notes || '',
       status: (data as any).status || 'new',
+      priority: (data as any).priority, // Include priority field
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -255,7 +248,7 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
       .from('leads')
       .update(lead)
       .eq('id', id)
-      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .single();
       
     if (error) {
@@ -272,7 +265,7 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
           .from('leads')
           .update(fallbackData)
           .eq('id', id)
-          .select('id, name, email, phone_number, address, notes, created_at, updated_at')
+          .select('id, name, email, phone_number, address, notes, priority, created_at, updated_at')
           .single();
           
         if (retryError) {
@@ -280,16 +273,6 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
           throw new Error(`Failed to update lead: ${retryError.message}`);
         }
         
-        if (!retryData) {
-          throw new Error('Failed to update lead: Lead not found');
-        }
-        
-        // If there was a status update, handle it separately
-        if (lead.status) {
-          await updateLeadStatus(id, lead.status);
-        }
-        
-        // Return with status, properly typed
         if (!retryData) {
           throw new Error('Failed to update lead: Lead not found');
         }
@@ -307,6 +290,7 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
           address: retryData.address || '',
           notes: retryData.notes || '',
           status: lead.status || (retryData as any).status || 'new',
+          priority: lead.priority !== undefined ? lead.priority : (retryData as any).priority, // Include priority field
           created_at: retryData.created_at,
           updated_at: retryData.updated_at
         };
@@ -322,11 +306,6 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
       throw new Error('Failed to update lead: Lead not found');
     }
     
-    // Return with preserved status, properly typed
-    if (!data) {
-      throw new Error('Failed to update lead: Lead not found');
-    }
-    
     const typedLead: Lead = {
       id: data.id,
       name: data.name,
@@ -335,6 +314,7 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
       address: data.address || '',
       notes: data.notes || '',
       status: (data as any).status || lead.status || 'new',
+      priority: (data as any).priority || lead.priority, // Include priority field
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -363,7 +343,7 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
       .from('leads')
       .update({ status })
       .eq('id', id)
-      .select('id, name, email, phone_number, address, notes, status, created_at, updated_at')
+      .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .single();
       
     if (error) {
@@ -372,7 +352,7 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
       // If we still have issues, fetch the lead without status to return
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('leads')
-        .select('id, name, email, phone_number, address, notes, created_at, updated_at')
+        .select('id, name, email, phone_number, address, notes, priority, created_at, updated_at')
         .eq('id', id)
         .single();
         
@@ -380,11 +360,6 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
         throw new Error(`Failed to update lead status: ${fallbackError.message}`);
       }
       
-      if (!fallbackData) {
-        throw new Error('Failed to update lead status: Lead not found');
-      }
-      
-      // Return with the requested status even if we couldn't save it, properly typed
       if (!fallbackData) {
         throw new Error('Failed to update lead status: Lead not found');
       }
@@ -397,6 +372,7 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
         address: fallbackData.address || '',
         notes: fallbackData.notes || '',
         status: status,
+        priority: (fallbackData as any).priority, // Include priority field
         created_at: fallbackData.created_at,
         updated_at: fallbackData.updated_at
       };
@@ -404,11 +380,6 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
       return typedLead;
     }
     
-    if (!data) {
-      throw new Error('Failed to update lead status: Lead not found');
-    }
-    
-    // Return with updated status, properly typed
     if (!data) {
       throw new Error('Failed to update lead status: Lead not found');
     }
@@ -421,6 +392,7 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
       address: data.address || '',
       notes: data.notes || '',
       status: (data as any).status || status,
+      priority: (data as any).priority, // Include priority field
       created_at: data.created_at,
       updated_at: data.updated_at
     };

@@ -4,7 +4,16 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Kanban, SquareStack } from 'lucide-react';
+import { 
+  Search, 
+  Plus, 
+  Kanban, 
+  SquareStack, 
+  SlidersHorizontal, 
+  ArrowUpDown, 
+  Calendar, 
+  Flag 
+} from 'lucide-react';
 import KanbanBoard from '@/components/KanbanBoard';
 import LeadSheet from '@/components/LeadSheet';
 import KanbanBoardManagerSheet from '@/components/KanbanBoardManagerSheet';
@@ -13,6 +22,18 @@ import { Lead, KanbanColumn } from '@/types/leads';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Define filter types
+export type LeadFilterType = 'none' | 'priority-high-first' | 'priority-low-first' | 'date-newest' | 'date-oldest';
 
 export default function LeadsPage() {
   const router = useRouter();
@@ -21,6 +42,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>(undefined);
   const [isKanbanManagerOpen, setIsKanbanManagerOpen] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [filterType, setFilterType] = useState<LeadFilterType>('none');
   
   const {
     leads,
@@ -113,6 +135,22 @@ export default function LeadsPage() {
     setTimeout(() => {
       fetchBoards({ silent: true });
     }, 100);
+  };
+
+  // Get the filter label for display
+  const getFilterLabel = () => {
+    switch (filterType) {
+      case 'priority-high-first':
+        return 'Priority (High → Low)';
+      case 'priority-low-first':
+        return 'Priority (Low → High)';
+      case 'date-newest':
+        return 'Date (Newest first)';
+      case 'date-oldest':
+        return 'Date (Oldest first)';
+      default:
+        return 'Filter';
+    }
   };
 
   // Skeleton card component for loading state
@@ -232,6 +270,68 @@ export default function LeadsPage() {
                 }
               />
             </div>
+
+                        {/* Filter Dropdown */}
+                        <div className="flex items-center mr-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-9 gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="hidden sm:inline text-sm">{getFilterLabel()}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Filter Leads</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem 
+                      onClick={() => setFilterType('none')}
+                      className={filterType === 'none' ? 'bg-accent' : ''}
+                    >
+                      <ArrowUpDown className="mr-2 h-4 w-4" />
+                      <span>None</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">By Priority</DropdownMenuLabel>
+                    <DropdownMenuItem 
+                      onClick={() => setFilterType('priority-high-first')}
+                      className={filterType === 'priority-high-first' ? 'bg-accent' : ''}
+                    >
+                      <Flag className="mr-2 h-4 w-4" />
+                      <span>High to Low</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setFilterType('priority-low-first')}
+                      className={filterType === 'priority-low-first' ? 'bg-accent' : ''}
+                    >
+                      <Flag className="mr-2 h-4 w-4" />
+                      <span>Low to High</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">By Date</DropdownMenuLabel>
+                    <DropdownMenuItem 
+                      onClick={() => setFilterType('date-newest')}
+                      className={filterType === 'date-newest' ? 'bg-accent' : ''}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Newest First</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setFilterType('date-oldest')}
+                      className={filterType === 'date-oldest' ? 'bg-accent' : ''}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Oldest First</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
           </div>
 
           {showLoading ? (
@@ -269,6 +369,7 @@ export default function LeadsPage() {
                       onLeadUpdate={handleLeadUpdate}
                       onEditLead={handleEditLead}
                       onContactLead={handleContactLead}
+                      filterType={filterType}
                       className="h-full overflow-hidden"
                     />
                   </div>

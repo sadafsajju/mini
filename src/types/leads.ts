@@ -1,4 +1,5 @@
 export type LeadStatus = string;
+export type LeadPriority = 'low' | 'medium' | 'high';
 
 export interface Lead {
   id: number;
@@ -8,6 +9,7 @@ export interface Lead {
   address: string;
   notes: string;
   status?: LeadStatus;
+  priority?: LeadPriority;
   created_at?: string;
   updated_at?: string;
 }

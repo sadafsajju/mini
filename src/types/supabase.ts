@@ -45,6 +45,7 @@ export type Database = {
           name: string
           notes: string | null
           phone_number: string | null
+          priority: string | null
           status: string | null
           updated_at: string | null
         }
@@ -56,6 +57,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone_number?: string | null
+          priority?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -67,6 +69,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone_number?: string | null
+          priority?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -95,6 +98,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_priority_column_to_leads: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       add_status_column_to_leads: {
         Args: Record<PropertyKey, never>
         Returns: undefined

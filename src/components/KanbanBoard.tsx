@@ -5,12 +5,22 @@ import KanbanBoardManager from './KanbanBoardManager';
 import DeleteZone from './DeleteZone';
 import { updateLead, deleteLead } from '@/lib/api/leads';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
+import { LeadFilterType } from '@/app/leads/page';
+
+// Priority weight for sorting
+const priorityWeight: Record<string, number> = {
+  'high': 3,
+  'medium': 2,
+  'low': 1,
+  'undefined': 0
+};
 
 interface KanbanBoardProps {
   leads: Lead[];
   onLeadUpdate?: (updatedLead: Lead) => void;
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
+  filterType?: LeadFilterType;
   className?: string;
   showBoardManager?: boolean;
 }
@@ -20,6 +30,7 @@ export default function KanbanBoard({
   onLeadUpdate,
   onEditLead,
   onContactLead,
+  filterType = 'none',
   className = '',
   showBoardManager = false
 }: KanbanBoardProps) {
@@ -31,7 +42,7 @@ export default function KanbanBoard({
   
   // Use the custom hook to manage kanban boards
   const { 
-    boards: columns, 
+    boards: originalColumns, 
     loading: boardsLoading,
     error: boardsError,
     addBoard,
@@ -39,6 +50,55 @@ export default function KanbanBoard({
     removeBoard,
     fetchBoards
   } = useKanbanBoards(localLeads);
+
+  // Apply filters to leads in each column
+  const columns = React.useMemo(() => {
+    return originalColumns.map(column => {
+      let filteredLeads = [...column.leads];
+      
+      // Apply filters based on filterType
+      switch (filterType) {
+        case 'priority-high-first':
+          filteredLeads.sort((a, b) => {
+            // Handle undefined priorities by using the string 'undefined'
+            const priorityA = a.priority || 'undefined';
+            const priorityB = b.priority || 'undefined';
+            return priorityWeight[priorityB] - priorityWeight[priorityA];
+          });
+          break;
+        case 'priority-low-first':
+          filteredLeads.sort((a, b) => {
+            // Handle undefined priorities by using the string 'undefined'
+            const priorityA = a.priority || 'undefined';
+            const priorityB = b.priority || 'undefined';
+            return priorityWeight[priorityA] - priorityWeight[priorityB];
+          });
+          break;
+        case 'date-newest':
+          filteredLeads.sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateB - dateA;
+          });
+          break;
+        case 'date-oldest':
+          filteredLeads.sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateA - dateB;
+          });
+          break;
+        default:
+          // No filtering
+          break;
+      }
+      
+      return {
+        ...column,
+        leads: filteredLeads
+      };
+    });
+  }, [originalColumns, filterType]);
 
   // Only show loading spinner on initial load when no columns are available
   const shouldShowLoading = boardsLoading && columns.length === 0;
@@ -95,12 +155,6 @@ export default function KanbanBoard({
         // Update local state immediately for better UX
         setLocalLeads(prev => prev.filter(lead => lead.id !== draggedLead.id));
         
-        // Important: Also update the columns state directly for immediate UI update
-        const updatedColumns = columns.map(column => ({
-          ...column,
-          leads: column.leads.filter(lead => lead.id !== draggedLead.id)
-        }));
-        
         // Delete the lead from the database
         await deleteLead(draggedLead.id);
         
@@ -128,32 +182,17 @@ export default function KanbanBoard({
 
   // Local function to update columns with a lead moved to a new column
   const updateColumnsLocally = (leadId: number, sourceColumnId: string, targetColumnId: string) => {
-    // Create a deep copy of the current columns
-    const updatedColumns = columns.map(column => ({
-      ...column,
-      leads: [...column.leads]
-    }));
-    
     // Find the lead in the source column
-    const sourceColumnIndex = updatedColumns.findIndex(col => col.id === sourceColumnId);
+    const sourceColumnIndex = originalColumns.findIndex(col => col.id === sourceColumnId);
     if (sourceColumnIndex === -1) return;
     
-    const leadIndex = updatedColumns[sourceColumnIndex].leads.findIndex(lead => lead.id === leadId);
+    const leadIndex = originalColumns[sourceColumnIndex].leads.findIndex(lead => lead.id === leadId);
     if (leadIndex === -1) return;
     
     // Get the lead and update its status
-    const lead = { ...updatedColumns[sourceColumnIndex].leads[leadIndex], status: targetColumnId };
+    const lead = { ...originalColumns[sourceColumnIndex].leads[leadIndex], status: targetColumnId };
     
-    // Remove from source column
-    updatedColumns[sourceColumnIndex].leads.splice(leadIndex, 1);
-    
-    // Add to target column
-    const targetColumnIndex = updatedColumns.findIndex(col => col.id === targetColumnId);
-    if (targetColumnIndex !== -1) {
-      updatedColumns[targetColumnIndex].leads.push(lead);
-    }
-    
-    return { updatedColumns, updatedLead: lead };
+    return { updatedLead: lead };
   };
 
   const handleDrop = async (e: React.DragEvent, targetColumn: KanbanColumnType) => {
@@ -169,8 +208,6 @@ export default function KanbanBoard({
         return;
       }
       
-      // Manually update the local state with our updated columns
-      // This avoids triggering the loading state
       const { updatedLead } = result;
       
       // Update the local leads state
@@ -199,18 +236,33 @@ export default function KanbanBoard({
             lead.id === draggedLead.id ? { ...lead, status: sourceColumn.id } : lead
           );
         });
-        
-        // Manually revert the UI without triggering loading state
-        const revertResult = updateColumnsLocally(draggedLead.id, targetColumn.id, sourceColumn.id);
-        if (revertResult) {
-          // We don't need to do anything with the result here as the useEffect will handle it
-        }
       }
     }
     
     setDraggedLead(null);
     setSourceColumn(null);
     setIsDragging(false);
+  };
+
+  // Handle priority or other lead property updates
+  const handleLeadPropertyUpdate = async (updatedLead: Lead) => {
+    try {
+      // Update local state immediately
+      setLocalLeads(prev => 
+        prev.map(lead => lead.id === updatedLead.id ? updatedLead : lead)
+      );
+      
+      // Call the parent's onLeadUpdate callback if provided
+      if (onLeadUpdate) {
+        onLeadUpdate(updatedLead);
+      }
+    } catch (error) {
+      console.error('Error updating lead property:', error);
+      
+      // Revert local changes if needed
+      setLocalLeads(leads);
+      fetchBoards({ silent: true });
+    }
   };
 
   // Re-fetch boards when leads change
@@ -228,7 +280,7 @@ export default function KanbanBoard({
     >
       {showBoardManager && (
         <KanbanBoardManager 
-          boards={columns}
+          boards={originalColumns}
           onAddBoard={addBoard}
           onUpdateBoard={updateBoard}
           onRemoveBoard={removeBoard}
@@ -247,10 +299,11 @@ export default function KanbanBoard({
         <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden h-full">
           {columns.map(column => (
             <KanbanColumn
-              key={`${column.id}-${column.leads.length}`} // Use leads length in key to force re-render
+              key={`${column.id}-${column.leads.length}-${filterType}`} // Include filterType in key to force re-render
               column={column}
               onEditLead={onEditLead}
               onContactLead={onContactLead}
+              onLeadUpdate={handleLeadPropertyUpdate}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}

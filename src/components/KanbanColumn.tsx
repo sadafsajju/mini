@@ -9,6 +9,7 @@ interface KanbanColumnProps {
   column: KanbanColumnType;
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
+  onLeadUpdate?: (updatedLead: Lead) => void;
   onDragStart?: (e: React.DragEvent, lead: Lead, sourceColumn: KanbanColumnType) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent, targetColumn: KanbanColumnType) => void;
@@ -74,6 +75,7 @@ export default function KanbanColumn({
   column,
   onEditLead,
   onContactLead,
+  onLeadUpdate,
   onDragStart,
   onDragOver,
   onDrop
@@ -120,10 +122,10 @@ export default function KanbanColumn({
                 lead={lead} 
                 onEditLead={onEditLead}
                 onContactLead={onContactLead}
+                onLeadUpdate={onLeadUpdate}
               />
             </div>
           ))}
-
         </div>
       </ScrollArea>
     </div>

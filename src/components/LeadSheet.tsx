@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Lead, LeadStatus } from '@/types/leads';
+import { Lead } from '@/types/leads';
 import { createLead, updateLead } from '@/lib/api/leads';
 import { toast } from '@/components/ui/use-toast';
 
@@ -40,10 +40,11 @@ import { toast } from '@/components/ui/use-toast';
 const leadFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  phone_number: z.string().optional(),
-  address: z.string().optional(),
-  notes: z.string().optional(),
-  status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'closed']).default('new')
+  phone_number: z.string().default(''),
+  address: z.string().default(''),
+  notes: z.string().default(''),
+  status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'closed']).default('new'),
+  priority: z.enum(['low', 'medium', 'high']).optional()
 });
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -71,14 +72,15 @@ export default function LeadSheet({
 
   // Initialize form with default values or existing lead data
   const form = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema),
+    resolver: zodResolver(leadFormSchema) as any,
     defaultValues: {
       name: lead?.name || '',
       email: lead?.email || '',
       phone_number: lead?.phone_number || '',
       address: lead?.address || '',
       notes: lead?.notes || '',
-      status: lead?.status || 'new'
+      status: (lead?.status as "new" | "contacted" | "qualified" | "proposal" | "closed") || 'new',
+      priority: lead?.priority || undefined
     }
   });
 
@@ -88,10 +90,11 @@ export default function LeadSheet({
       form.reset({
         name: lead.name,
         email: lead.email,
-        phone_number: lead.phone_number,
+        phone_number: lead.phone_number || '',
         address: lead.address || '',
         notes: lead.notes || '',
-        status: lead.status || 'new'
+        status: lead.status as "new" | "contacted" | "qualified" | "proposal" | "closed" || 'new',
+        priority: lead.priority
       });
     }
   }, [lead, form]);
@@ -126,23 +129,20 @@ export default function LeadSheet({
         email: data.email.trim(),
         phone_number: data.phone_number ? data.phone_number.trim() : '',
         address: data.address ? data.address.trim() : '',
-        notes: data.notes ? data.notes.trim() : ''
+        notes: data.notes ? data.notes.trim() : '',
+        status: data.status as "new" | "contacted" | "qualified" | "proposal" | "closed",
+        priority: data.priority
       };
 
       if (isEditing && lead?.id) {
-        // For updates, we can include the status field
-        const updateData = {
-          ...formattedData,
-          status: data.status
-        };
         // Update existing lead
-        result = await updateLead(lead.id, updateData);
+        result = await updateLead(lead.id, formattedData);
         toast({
           title: "Lead updated",
           description: "Lead has been successfully updated."
         });
       } else {
-        // Create new lead - don't include status as it might not exist in DB
+        // Create new lead
         result = await createLead(formattedData);
         toast({
           title: "Lead created",
@@ -271,6 +271,33 @@ export default function LeadSheet({
                       <SelectItem value="qualified">Qualified</SelectItem>
                       <SelectItem value="proposal">Proposal</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a priority" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
