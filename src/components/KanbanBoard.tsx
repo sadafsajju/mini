@@ -4,6 +4,8 @@ import KanbanColumn from './KanbanColumn';
 import KanbanBoardManager from './KanbanBoardManager';
 import DeleteZone from './DeleteZone';
 import { updateLead, deleteLead } from '@/lib/api/leads';
+import { createCardMovementHistory } from '@/lib/api/kanbanCardHistory';
+import KanbanCardMoveDialog from './KanbanCardMoveDialog';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
 import { LeadFilterType } from '@/app/leads/page';
 
@@ -38,6 +40,12 @@ export default function KanbanBoard({
   const [sourceColumn, setSourceColumn] = useState<KanbanColumnType | null>(null);
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [pendingMove, setPendingMove] = useState<{
+    lead: Lead | null,
+    sourceColumn: KanbanColumnType | null,
+    targetColumn: KanbanColumnType | null
+  }>({ lead: null, sourceColumn: null, targetColumn: null });
   const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
   // Track if we've had a successful load to prevent showing loading spinners
   const hasLoadedBefore = React.useRef(false);
@@ -207,50 +215,101 @@ export default function KanbanBoard({
     e.preventDefault();
     
     if (draggedLead && sourceColumn && targetColumn.id !== sourceColumn.id) {
-      // Update locally first for smooth UI without triggering loading state
-      const result = updateColumnsLocally(draggedLead.id, sourceColumn.id, targetColumn.id);
-      if (!result) {
-        setDraggedLead(null);
-        setSourceColumn(null);
-        setIsDragging(false);
-        return;
-      }
-      
-      const { updatedLead } = result;
-      
-      // Update the local leads state
-      setLocalLeads(prev => {
-        return prev.map(lead => 
-          lead.id === draggedLead.id ? updatedLead : lead
-        );
+      // Instead of immediately updating, store the pending move and show dialog
+      setPendingMove({
+        lead: draggedLead,
+        sourceColumn: sourceColumn,
+        targetColumn: targetColumn
       });
+      setMoveDialogOpen(true);
       
-      try {
-        // Update lead status in the database in the background
-        const apiUpdatedLead = await updateLead(draggedLead.id, { 
-          status: targetColumn.id
-        });
-        
-        // Call the callback to refresh the leads
-        if (onLeadUpdate) {
-          onLeadUpdate(apiUpdatedLead);
-        }
-      } catch (error) {
-        console.error('Error updating lead status:', error);
-        
-        // Revert the local change if the API update fails
-        setLocalLeads(prev => {
-          return prev.map(lead => 
-            lead.id === draggedLead.id ? { ...lead, status: sourceColumn.id } : lead
-          );
-        });
-      }
+      // Keep the dragging state active until dialog is closed
+      return;
     }
     
     setDraggedLead(null);
     setSourceColumn(null);
     setIsDragging(false);
   };
+  
+  // Handle the actual move after notes are entered
+  const handleMoveWithNotes = async (notes: string) => {
+    const { lead, sourceColumn, targetColumn } = pendingMove;
+    
+    if (!lead || !sourceColumn || !targetColumn) return;
+    
+    // Update locally first for smooth UI without triggering loading state
+    const result = updateColumnsLocally(lead.id, sourceColumn.id, targetColumn.id);
+    if (!result) {
+      setDraggedLead(null);
+      setSourceColumn(null);
+      setIsDragging(false);
+      setPendingMove({ lead: null, sourceColumn: null, targetColumn: null });
+      return;
+    }
+    
+    const { updatedLead } = result;
+    
+    // Update the local leads state
+    setLocalLeads(prev => {
+      return prev.map(l => 
+        l.id === lead.id ? updatedLead : l
+      );
+    });
+    
+    try {
+      // Update lead status in the database
+      const apiUpdatedLead = await updateLead(lead.id, { 
+        status: targetColumn.id
+      });
+      
+      // Create history entry for the movement with notes
+      await createCardMovementHistory(
+        lead.id,
+        sourceColumn.id,
+        targetColumn.id,
+        notes,
+        getColumnTitleById(sourceColumn.id),
+        getColumnTitleById(targetColumn.id)
+      );
+      
+      // Call the callback to refresh the leads
+      if (onLeadUpdate) {
+        onLeadUpdate(apiUpdatedLead);
+      }
+    } catch (error) {
+      console.error('Error updating lead status or creating history:', error);
+      
+      // Revert the local change if the API update fails
+      setLocalLeads(prev => {
+        return prev.map(l => 
+          l.id === lead.id ? { ...l, status: sourceColumn.id } : l
+        );
+      });
+    }
+    
+    // Reset state
+    setDraggedLead(null);
+    setSourceColumn(null);
+    setIsDragging(false);
+    setPendingMove({ lead: null, sourceColumn: null, targetColumn: null });
+  };
+  
+  // Handle dialog close without saving
+  const handleCancelMove = () => {
+    setMoveDialogOpen(false);
+    setDraggedLead(null);
+    setSourceColumn(null);
+    setIsDragging(false);
+    setPendingMove({ lead: null, sourceColumn: null, targetColumn: null });
+  };
+  
+  // Get column title by id (helper function for history)
+  const getColumnTitleById = (columnId: string): string => {
+    const column = columns.find(col => col.id === columnId);
+    return column?.title || columnId;
+  };
+  
 
   // Handle priority or other lead property updates
   const handleLeadPropertyUpdate = async (updatedLead: Lead) => {
@@ -345,6 +404,16 @@ export default function KanbanBoard({
         onDragOver={handleDeleteZoneDragOver}
         onDragLeave={handleDeleteZoneDragLeave}
         onDrop={handleDeleteZoneDrop}
+      />
+      
+      {/* Movement Notes Dialog */}
+      <KanbanCardMoveDialog
+        isOpen={moveDialogOpen}
+        onClose={handleCancelMove}
+        lead={pendingMove.lead}
+        fromColumn={pendingMove.sourceColumn?.title || ''}
+        toColumn={pendingMove.targetColumn?.title || ''}
+        onSave={handleMoveWithNotes}
       />
     </div>
   );

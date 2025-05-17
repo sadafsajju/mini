@@ -5,9 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Lead } from '@/types/leads';
-import { Pencil, Phone, Flag, ChevronDown } from 'lucide-react';
+import { Pencil, Phone, Flag, ChevronDown, History } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import KanbanCardHistory from './KanbanCardHistory';
 
 interface KanbanCardProps {
   lead: Lead;
@@ -72,9 +80,12 @@ export default function KanbanCard({ lead, onEditLead, onContactLead, onLeadUpda
     }
   };
 
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  
   return (
     <Card className="mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
       <TooltipProvider>
+        {/* Edit button tooltip */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
@@ -89,7 +100,36 @@ export default function KanbanCard({ lead, onEditLead, onContactLead, onLeadUpda
             <p>Edit</p>
           </TooltipContent>
         </Tooltip>
+        
+        {/* History button tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setHistoryDialogOpen(true)}
+              className="absolute right-10 top-2 h-7 w-7 p-0 opacity-0 bg-blue-800/10 hover:bg-blue-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+              <History className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>View History</p>
+          </TooltipContent>
+        </Tooltip>
       </TooltipProvider>
+      
+      {/* History Sheet */}
+      <Sheet open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} side="right">
+        <SheetContent className="overflow-y-auto w-full sm:max-w-md">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Card Movement Timeline</SheetTitle>
+            <SheetDescription>
+              Complete history for "{lead.name}"
+            </SheetDescription>
+          </SheetHeader>
+          <KanbanCardHistory leadId={lead.id} />
+        </SheetContent>
+      </Sheet>
       <CardHeader className="p-3 pb-0">
         <div className="flex justify-between items-start">
           <CardTitle className="text-base font-normal capitalize">{lead.name}</CardTitle>
