@@ -151,7 +151,8 @@ export default function LeadsPage() {
     setTimeout(() => {
       fetchBoards({ silent: true });
     }, 100);
-    return result;
+    // Add empty leads array to match expected return type
+    return { ...result, leads: [] } as KanbanColumn;
   };
 
   const handleUpdateBoard = async (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => {
@@ -160,7 +161,8 @@ export default function LeadsPage() {
     setTimeout(() => {
       fetchBoards({ silent: true });
     }, 100);
-    return result;
+    // Add empty leads array to match expected return type
+    return { ...result, leads: [] } as KanbanColumn;
   };
 
   const handleRemoveBoard = async (id: string) => {
@@ -526,6 +528,7 @@ export default function LeadsPage() {
                       <div className="p-4 h-full">
                         <LeadsGrid 
                           leads={filteredAndSortedLeads}
+                          boards={boards}
                           onEditLead={handleEditLead}
                           onContactLead={handleContactLead}
                         />

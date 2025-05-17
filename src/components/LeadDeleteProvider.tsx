@@ -50,7 +50,7 @@ export const LeadDeleteProvider: React.FC<LeadDeleteProviderProps> = ({
         onLeadDeleted({
           ...leadToDelete,
           __deleted: true
-        } as any);
+        } as Lead & { __deleted: boolean });
       }
       
       // Close the alert dialog

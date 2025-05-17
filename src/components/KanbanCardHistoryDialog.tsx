@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ export default function KanbanCardHistoryDialog({ lead }: KanbanCardHistoryDialo
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     if (!isOpen) return;
     
     try {
@@ -37,11 +37,11 @@ export default function KanbanCardHistoryDialog({ lead }: KanbanCardHistoryDialo
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isOpen, lead.id]);
 
   useEffect(() => {
     fetchHistory();
-  }, [isOpen, lead.id]);
+  }, [isOpen, lead.id, fetchHistory]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

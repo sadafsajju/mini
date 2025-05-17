@@ -66,6 +66,19 @@ export default function KanbanBoard({
     fetchBoards
   } = useKanbanBoards(localLeads);
 
+  // Create wrapper functions with the correct return types
+  const handleAddBoard = async (board: Omit<KanbanColumnType, 'leads' | 'id'>) => {
+    const result = await addBoard(board);
+    // Add empty leads array to match the expected return type
+    return { ...result, leads: [] } as KanbanColumnType;
+  };
+
+  const handleUpdateBoard = async (id: string, board: Partial<Omit<KanbanColumnType, 'leads' | 'id'>>) => {
+    const result = await updateBoard(id, board);
+    // Add empty leads array to match the expected return type
+    return { ...result, leads: [] } as KanbanColumnType;
+  };
+
   // Apply filters to leads in each column
   const columns = React.useMemo(() => {
     // If boards have loaded successfully, mark our ref
@@ -74,7 +87,7 @@ export default function KanbanBoard({
     }
 
     return originalColumns.map(column => {
-      let filteredLeads = [...column.leads];
+      const filteredLeads = [...column.leads];
       
       // Apply filters based on filterType
       switch (filterType) {
@@ -200,7 +213,7 @@ export default function KanbanBoard({
         onLeadUpdate({
           ...draggedLead,
           __deleted: true
-        } as any);
+        } as Lead & { __deleted: boolean });
       }
       
       // Close the alert dialog
@@ -389,8 +402,8 @@ export default function KanbanBoard({
       {showBoardManager && (
         <KanbanBoardManager 
           boards={originalColumns}
-          onAddBoard={addBoard}
-          onUpdateBoard={updateBoard}
+          onAddBoard={handleAddBoard}
+          onUpdateBoard={handleUpdateBoard}
           onRemoveBoard={removeBoard}
           onReorderBoards={reorderBoards}
         />

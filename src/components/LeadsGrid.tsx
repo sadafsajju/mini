@@ -1,15 +1,17 @@
 import React from 'react';
 import LeadCard from './LeadCard';
-import { Lead } from '@/types/leads';
+import { Lead, KanbanColumn } from '@/types/leads';
 
 interface LeadsGridProps {
   leads: Lead[];
+  boards?: KanbanColumn[];
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
 }
 
 export const LeadsGrid: React.FC<LeadsGridProps> = ({
   leads,
+  boards = [],
   onEditLead,
   onContactLead
 }) => {
@@ -23,14 +25,21 @@ export const LeadsGrid: React.FC<LeadsGridProps> = ({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {leads.map((lead) => (
-        <LeadCard 
-          key={lead.id} 
-          lead={lead} 
-          onEdit={onEditLead}
-          onContact={onContactLead}
-        />
-      ))}
+      {leads.map((lead) => {
+        // Find the board that contains this lead
+        const board = boards.find(board => board.id === lead.status);
+        
+        return (
+          <LeadCard 
+            key={lead.id} 
+            lead={lead} 
+            onEdit={onEditLead}
+            onContact={onContactLead}
+            boardTitle={board?.title}
+            boardColor={board?.color}
+          />
+        );
+      })}
     </div>
   );
 };

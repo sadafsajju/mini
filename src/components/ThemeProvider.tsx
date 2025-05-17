@@ -13,14 +13,10 @@ type ThemeProviderProps = {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   return (
     <NextThemesProvider
-      // Cast to any to bypass TypeScript checking for the attributes
-      // This is a workaround for the missing type declarations
-      {...{
-        attribute: "class",
-        defaultTheme: "system",
-        enableSystem: true,
-        disableTransitionOnChange: true
-      } as any}
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
     >
       {children}
     </NextThemesProvider>

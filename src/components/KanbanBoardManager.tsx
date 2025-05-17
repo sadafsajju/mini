@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
@@ -20,8 +20,8 @@ import { Label } from '@/components/ui/label';
 
 interface KanbanBoardManagerProps {
   boards: KanbanColumn[];
-  onAddBoard: (board: Omit<KanbanColumn, 'leads' | 'id'>) => Promise<any>;
-  onUpdateBoard: (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => Promise<any>;
+  onAddBoard: (board: Omit<KanbanColumn, 'leads' | 'id'>) => Promise<KanbanColumn>;
+  onUpdateBoard: (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => Promise<KanbanColumn>;
   onRemoveBoard: (id: string) => Promise<void>;
   onReorderBoards?: (boards: KanbanColumn[]) => Promise<void>;
 }

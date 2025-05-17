@@ -23,17 +23,10 @@ interface KanbanCardProps {
   onLeadUpdate?: (updatedLead: Lead) => void;
 }
 
-export default function KanbanCard({ lead, onEditLead, onContactLead, onLeadUpdate }: KanbanCardProps) {
+export default function KanbanCard({ lead, onEditLead, onLeadUpdate }: KanbanCardProps) {
   const [priority, setPriority] = useState<string | undefined>(lead.priority);
   const [isUpdating, setIsUpdating] = useState(false);
   
-  const initials = lead.name
-    .split(' ')
-    .map(name => name[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-    
   const formattedDate = lead.created_at 
     ? formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })
     : '';

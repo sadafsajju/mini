@@ -135,7 +135,7 @@ export async function updateKanbanBoardPositions(boards: { id: string, position:
         // RPC worked, return early
         return;
       }
-    } catch (rpcError) {
+    } catch {
       // RPC failed, will fall back to individual updates
       console.log('RPC not available, falling back to individual updates');
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Lead } from '@/types/leads';
@@ -22,20 +23,15 @@ interface LeadCardProps {
   onEdit?: (id: number) => void;
   onContact?: (id: number) => void;
   onLeadUpdate?: (updatedLead: Lead) => void;
+  boardTitle?: string;
+  boardColor?: string;
 }
 
-const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpdate }) => {
+const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onLeadUpdate, boardTitle, boardColor = 'blue' }) => {
   const { openDeleteDialog } = useLeadDelete();
   const [priority, setPriority] = useState<string | undefined>(lead.priority);
   const [isUpdating, setIsUpdating] = useState(false);
   
-  const initials = lead.name
-    .split(' ')
-    .map(name => name[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-    
   const formattedDate = lead.created_at 
     ? formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })
     : '';
@@ -85,6 +81,7 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpda
   
   return (
     <Card className="flex-end mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
+
       <div className='absolute right-4 top-4 flex justify-end gap-2 items-center'>
         <TooltipProvider>
           {/* Edit button tooltip */}
@@ -166,8 +163,18 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpda
         )}
 
         <div className="mt-2 text-sm border-t border-border/50 dark:border-muted/20 pt-2 text-muted-foreground line-clamp-2">
-          <CardDescription className="flex items-center justify-between text-xs py-2">
+          <CardDescription className="flex items-center justify-between text-xs py-2 px-2">
             <span>{formattedDate}</span>
+            <div className='flex gap-2'>
+            {boardTitle && (
+              <Badge 
+                variant="outline" 
+                className={`text-xs font-normal bg-${boardColor}-100 text-${boardColor}-800 dark:bg-${boardColor}-900/30 dark:text-${boardColor}-400 border-${boardColor}-200 dark:border-${boardColor}-800/30`}
+              >
+                {boardTitle}
+              </Badge>
+
+            )}
             
             {/* Priority Dropdown */}
             <Select
@@ -208,6 +215,7 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpda
                 </SelectItem>
               </SelectContent>
             </Select>
+            </div>
           </CardDescription>
         </div>
       </CardContent>

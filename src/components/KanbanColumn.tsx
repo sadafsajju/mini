@@ -91,12 +91,12 @@ export default function KanbanColumn({
       onDragOver={e => {
         e.preventDefault();
         setIsDragOver(true);
-        onDragOver && onDragOver(e);
+        if (onDragOver) onDragOver(e);
       }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={e => {
         setIsDragOver(false);
-        onDrop && onDrop(e, column);
+        if (onDrop) onDrop(e, column);
       }}
     >
       <div className="flex items-center justify-between mb-3 px-4 pt-3">

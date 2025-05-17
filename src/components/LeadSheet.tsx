@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { 
@@ -72,7 +72,7 @@ export default function LeadSheet({
 
   // Initialize form with default values or existing lead data
   const form = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema) as any,
+    resolver: zodResolver(leadFormSchema) as Resolver<LeadFormValues>,
     defaultValues: {
       name: lead?.name || '',
       email: lead?.email || '',

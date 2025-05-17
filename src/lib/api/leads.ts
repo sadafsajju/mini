@@ -1,7 +1,7 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
-import { Lead, LeadStatus } from '@/types/leads';
+import { Lead, LeadPriority } from '@/types/leads';
 
 // Always assume status column exists (we'll create it if it doesn't)
 let statusColumnExists = true;
@@ -40,8 +40,8 @@ export async function getLeads(): Promise<Lead[]> {
           phone_number: lead.phone_number || '',
           address: lead.address || '',
           notes: lead.notes || '',
-          status: (lead as any).status || 'new', // Use type assertion for potentially missing status
-          priority: (lead as any).priority, // Include priority field
+          status: (lead as { status?: string }).status || 'new', // Use type assertion for potentially missing status
+          priority: (lead as { priority?: string }).priority as LeadPriority | undefined, // Include priority field
           created_at: lead.created_at,
           updated_at: lead.updated_at
         };
@@ -68,7 +68,7 @@ export async function getLeads(): Promise<Lead[]> {
  */
 export async function searchLeads(query: string): Promise<Lead[]> {
   try {
-    let queryBuilder = supabase
+    const queryBuilder = supabase
       .from('leads')
       .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .or(`name.ilike.%${query}%,email.ilike.%${query}%,phone_number.ilike.%${query}%,address.ilike.%${query}%,notes.ilike.%${query}%`)
@@ -91,8 +91,8 @@ export async function searchLeads(query: string): Promise<Lead[]> {
         phone_number: lead.phone_number || '',
         address: lead.address || '',
         notes: lead.notes || '',
-        status: (lead as any).status || 'new', // Use type assertion for potentially missing status
-        priority: (lead as any).priority, // Include priority field
+        status: (lead as { status?: string }).status || 'new', // Use type assertion for potentially missing status
+        priority: (lead as { priority?: string }).priority as LeadPriority | undefined, // Include priority field
         created_at: lead.created_at,
         updated_at: lead.updated_at
       };
@@ -109,7 +109,7 @@ export async function searchLeads(query: string): Promise<Lead[]> {
  */
 export async function getLeadById(id: number): Promise<Lead | null> {
   try {
-    let queryBuilder = supabase
+    const queryBuilder = supabase
       .from('leads')
       .select('id, name, email, phone_number, address, notes, status, priority, created_at, updated_at')
       .eq('id', id)
@@ -127,7 +127,7 @@ export async function getLeadById(id: number): Promise<Lead | null> {
       return {
         ...data,
         status: data.status || 'new', // Fallback to 'new' if status is null
-        priority: data.priority // Include priority field
+        priority: data.priority as LeadPriority | undefined // Include priority field
       };
     }
     
@@ -197,7 +197,7 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
           address: retryData.address || '',
           notes: retryData.notes || '',
           status: lead.status || 'new',
-          priority: retryData.priority || lead.priority, // Include priority field
+          priority: (retryData.priority || lead.priority) as LeadPriority | undefined, // Include priority field
           created_at: retryData.created_at,
           updated_at: retryData.updated_at
         };
@@ -220,8 +220,8 @@ export async function createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated
       phone_number: data.phone_number || '',
       address: data.address || '',
       notes: data.notes || '',
-      status: (data as any).status || 'new',
-      priority: (data as any).priority, // Include priority field
+      status: (data as { status?: string }).status || 'new',
+      priority: (data as { priority?: string }).priority as LeadPriority | undefined, // Include priority field
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -289,8 +289,8 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
           phone_number: retryData.phone_number || '',
           address: retryData.address || '',
           notes: retryData.notes || '',
-          status: lead.status || (retryData as any).status || 'new',
-          priority: lead.priority !== undefined ? lead.priority : (retryData as any).priority, // Include priority field
+          status: lead.status || (retryData as { status?: string }).status || 'new',
+          priority: (lead.priority !== undefined ? lead.priority : (retryData as { priority?: string }).priority) as LeadPriority | undefined, // Include priority field
           created_at: retryData.created_at,
           updated_at: retryData.updated_at
         };
@@ -313,8 +313,8 @@ export async function updateLead(id: number, lead: Partial<Omit<Lead, 'id' | 'cr
       phone_number: data.phone_number || '',
       address: data.address || '',
       notes: data.notes || '',
-      status: (data as any).status || lead.status || 'new',
-      priority: (data as any).priority || lead.priority, // Include priority field
+      status: (data as { status?: string }).status || lead.status || 'new',
+      priority: ((data as { priority?: string }).priority || lead.priority) as LeadPriority | undefined, // Include priority field
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -372,7 +372,7 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
         address: fallbackData.address || '',
         notes: fallbackData.notes || '',
         status: status,
-        priority: (fallbackData as any).priority, // Include priority field
+        priority: (fallbackData as { priority?: string }).priority as LeadPriority | undefined, // Include priority field
         created_at: fallbackData.created_at,
         updated_at: fallbackData.updated_at
       };
@@ -391,8 +391,8 @@ async function updateLeadStatus(id: number, status: string): Promise<Lead> {
       phone_number: data.phone_number || '',
       address: data.address || '',
       notes: data.notes || '',
-      status: (data as any).status || status,
-      priority: (data as any).priority, // Include priority field
+      status: (data as { status?: string }).status || status,
+      priority: (data as { priority?: string }).priority as LeadPriority | undefined, // Include priority field
       created_at: data.created_at,
       updated_at: data.updated_at
     };

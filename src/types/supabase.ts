@@ -36,6 +36,50 @@ export type Database = {
         }
         Relationships: []
       }
+      kanban_card_history: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          from_column: string
+          from_column_title: string | null
+          id: string
+          lead_id: number
+          notes: string | null
+          to_column: string
+          to_column_title: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          from_column: string
+          from_column_title?: string | null
+          id?: string
+          lead_id: number
+          notes?: string | null
+          to_column: string
+          to_column_title?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          from_column?: string
+          from_column_title?: string | null
+          id?: string
+          lead_id?: number
+          notes?: string | null
+          to_column?: string
+          to_column_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           address: string | null

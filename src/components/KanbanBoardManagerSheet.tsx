@@ -14,8 +14,8 @@ interface KanbanBoardManagerSheetProps {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   boards: KanbanColumn[];
-  onAddBoard: (board: Omit<KanbanColumn, 'leads' | 'id'>) => Promise<any>;
-  onUpdateBoard: (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => Promise<any>;
+  onAddBoard: (board: Omit<KanbanColumn, 'leads' | 'id'>) => Promise<KanbanColumn>;
+  onUpdateBoard: (id: string, board: Partial<Omit<KanbanColumn, 'leads' | 'id'>>) => Promise<KanbanColumn>;
   onRemoveBoard: (id: string) => Promise<void>;
   onReorderBoards?: (boards: KanbanColumn[]) => Promise<void>;
   trigger?: React.ReactNode;

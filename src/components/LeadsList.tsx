@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lead, KanbanColumn } from '@/types/leads';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Phone, Mail, Flag, ArrowUp, ArrowDown, History, Trash2 } from 'lucide-react';
+import { Pencil, Mail, Flag, ArrowUp, ArrowDown, History, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useLeadDelete } from './LeadDeleteProvider';
 import {
@@ -38,8 +38,7 @@ export default function LeadsList({
   onEditLead,
   onSort,
   sortColumn,
-  sortDirection,
-  onContactLead
+  sortDirection
 }: LeadsListProps) {
   const { openDeleteDialog } = useLeadDelete();
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -101,15 +100,6 @@ export default function LeadsList({
     purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
     gray: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
     red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  };
-
-  // Sort indicator component
-  const SortIndicator = ({ column }: { column: string }) => {
-    if (sortColumn !== column) return null;
-    
-    return sortDirection === 'asc' ? 
-      <ArrowUp className="ml-1 h-4 w-4" /> : 
-      <ArrowDown className="ml-1 h-4 w-4" />;
   };
 
   // Column header with sort capability
@@ -248,7 +238,7 @@ export default function LeadsList({
           <SheetHeader className="mb-4">
             <SheetTitle>Card Movement Timeline</SheetTitle>
             <SheetDescription>
-              Complete history for "{selectedLeadName}"
+              Complete history for &quot;{selectedLeadName}&quot;
             </SheetDescription>
           </SheetHeader>
           {selectedLeadId && <KanbanCardHistory leadId={selectedLeadId} />}
