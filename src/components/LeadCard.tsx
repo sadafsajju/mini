@@ -3,9 +3,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
 import { Lead } from '@/types/leads';
-import { Pencil, Phone, Flag, ChevronDown, History, Trash2 } from 'lucide-react';
+import { Pencil, Flag, History, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
 import { useLeadDelete } from './LeadDeleteProvider';
@@ -85,56 +84,59 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpda
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   
   return (
-    <Card className="mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
-      <TooltipProvider>
-        {/* Edit button tooltip */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => onEdit && onEdit(lead.id)}
-              className="absolute right-2 top-2 h-7 w-7 p-0 opacity-0 bg-blue-800/10 hover:bg-blue-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Edit</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        {/* History button tooltip */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setHistoryDialogOpen(true)}
-              className="absolute right-10 top-2 h-7 w-7 p-0 opacity-0 bg-blue-800/10 hover:bg-blue-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-              <History className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>View History</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        {/* Delete button tooltip */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => openDeleteDialog(lead)}
-              className="absolute right-18 top-2 h-7 w-7 p-0 opacity-0 bg-red-800/10 hover:bg-red-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Delete</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <Card className="flex-end mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
+      <div className='absolute right-4 top-4 flex justify-end gap-2 items-center'>
+        <TooltipProvider>
+          {/* Edit button tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => onEdit && onEdit(lead.id)}
+                className="h-7 w-7 p-0 opacity-0 bg-blue-800/10 hover:bg-blue-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          {/* History button tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setHistoryDialogOpen(true)}
+                className="h-7 w-7 p-0 opacity-0 bg-blue-800/10 hover:bg-blue-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                <History className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View History</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          {/* Delete button tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => openDeleteDialog(lead)}
+                className="h-7 w-7 p-0 opacity-0 bg-red-800/10 hover:bg-red-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Delete</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
       
       {/* History Sheet */}
       <Sheet open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
@@ -142,7 +144,7 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpda
           <SheetHeader className="mb-4">
             <SheetTitle>Card Movement Timeline</SheetTitle>
             <SheetDescription>
-              Complete history for "{lead.name}"
+              Complete history for &quot;{lead.name}&quot;
             </SheetDescription>
           </SheetHeader>
           <KanbanCardHistory leadId={lead.id} />

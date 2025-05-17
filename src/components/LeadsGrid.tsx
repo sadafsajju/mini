@@ -1,6 +1,6 @@
 import React from 'react';
 import LeadCard from './LeadCard';
-import { Lead } from '@/lib/supabase';
+import { Lead } from '@/types/leads';
 
 interface LeadsGridProps {
   leads: Lead[];

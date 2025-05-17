@@ -58,7 +58,7 @@ export default function KanbanCardHistoryDialog({ lead }: KanbanCardHistoryDialo
         <DialogHeader>
           <DialogTitle>Card Movement History</DialogTitle>
           <DialogDescription>
-            View history of all movements for "{lead.name}"
+            View history of all movements for &quot;{lead.name}&quot;
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4 max-h-96 overflow-y-auto">

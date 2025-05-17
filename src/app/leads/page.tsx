@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Removed useCallback
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { 
   Search, 
   Plus, 
   SquareStack, 
-  SlidersHorizontal, 
   ArrowUpDown, 
   Calendar, 
-  Flag 
+  Flag, 
+  Funnel,
+  X
 } from 'lucide-react';
 import KanbanBoard from '@/components/KanbanBoard';
 import LeadsGrid from '@/components/LeadsGrid';
@@ -22,7 +24,7 @@ import { LeadDeleteProvider } from '@/components/LeadDeleteProvider';
 import { useLeads } from '@/hooks/useLeads';
 import { Lead, KanbanColumn } from '@/types/leads';
 import { Header } from '@/components/Header';
-import { Skeleton } from '@/components/ui/skeleton';
+// import { Skeleton } from '@/components/ui/skeleton'; // Removed Skeleton import
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { useKanbanBoards } from '@/hooks/useKanbanBoards';
 import ViewToggle, { ViewType } from '@/components/ViewToggle';
@@ -45,7 +47,7 @@ export default function LeadsPage() {
   const [isLeadSheetOpen, setIsLeadSheetOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>(undefined);
   const [isKanbanManagerOpen, setIsKanbanManagerOpen] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0);
+  const [forceUpdate, ] = useState(0); // Removed setForceUpdate
   const [filterType, setFilterType] = useState<LeadFilterType>('none');
   // Add state for the current view
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
@@ -63,14 +65,14 @@ export default function LeadsPage() {
     updateLocalLead,
     removeLocalLead,
     setSearchTerm: handleSearch,
-    isInitialLoad: isLeadsInitialLoad
+    // isInitialLoad: isLeadsInitialLoad // Removed isLeadsInitialLoad
   } = useLeads();
   
   // Get kanban boards data using the hook
   const {
     boards,
     loading: boardsLoading,
-    error: boardsError,
+    // error: boardsError, // Removed boardsError
     addBoard,
     updateBoard,
     removeBoard,
@@ -123,7 +125,7 @@ export default function LeadsPage() {
   // Enhanced handler for lead updates, including deletions
   const handleLeadUpdate = (updatedLead: Lead) => {
     // Check if this is a deletion (we added the __deleted flag in KanbanBoard)
-    if ((updatedLead as any).__deleted) {
+    if ((updatedLead as Lead & { __deleted?: boolean }).__deleted) {
       // If the lead was deleted, remove it from local state
       if (removeLocalLead) {
         removeLocalLead(updatedLead.id);
@@ -202,7 +204,7 @@ export default function LeadsPage() {
       return leads; // No need to filter here as KanbanBoard handles it
     }
     
-    let filtered = [...leads];
+    const filtered = [...leads]; // Changed let to const
     
     // Apply filters based on filterType
     switch (filterType) {
@@ -269,8 +271,8 @@ export default function LeadsPage() {
                 'low': 1,
                 '': 0
               };
-              valA = priorityWeight[(valA as string) || ''] || 0;
-              valB = priorityWeight[(valB as string) || ''] || 0;
+              valA = priorityWeight[((valA as string) || '') as keyof typeof priorityWeight] || 0;
+              valB = priorityWeight[((valB as string) || '') as keyof typeof priorityWeight] || 0;
             }
             
             if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
@@ -316,13 +318,20 @@ export default function LeadsPage() {
     handleSearch(value);
   };
 
+  // Clear search input
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    handleSearch('');
+  };
+
   // Content wrapper with consistent width constraint
   const ViewContainer = ({ children }: { children: React.ReactNode }) => {
     return (
       <div className="w-full h-full flex-1 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-auto">
+        <ScrollArea className="absolute inset-0">
           {children}
-        </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
     );
   };
@@ -331,12 +340,12 @@ export default function LeadsPage() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <LeadDeleteProvider onLeadDeleted={handleLeadUpdate}>
-        <div className="container mx-auto p-4 flex-1 overflow-hidden flex flex-col">
+        <div className="container mx-auto p-4 flex-1 flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h1 className="text-3xl font-normal">Leads</h1>
           </div>
 
-          <div className="w-full flex-1 overflow-hidden flex flex-col">
+          <div className="w-full flex-1 flex flex-col">
             <div className="flex items-center mb-2">
               <div className="relative flex-1 sm:flex-initial">
                 <Search className="absolute left-2 top-3 h-4 w-4 text-gray-400" />
@@ -344,8 +353,17 @@ export default function LeadsPage() {
                   placeholder="Search leads..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="pl-8 w-full sm:w-64 border-none bg-muted"
+                  className="pl-8 w-full sm:w-64 border-none bg-muted pr-8"
                 />
+                {searchTerm && (
+                  <button 
+                    onClick={handleClearSearch}
+                    className="absolute right-2 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               {/* Use the ViewToggle component */}
@@ -356,20 +374,20 @@ export default function LeadsPage() {
                 />
               </div>
 
-              <div className="flex w-full sm:w-auto gap-2">
+              <div className="flex w-full sm:w-auto gap-2 mr-2">
                 <LeadSheet
                   isOpen={isLeadSheetOpen}
                   onOpenChange={setIsLeadSheetOpen}
                   lead={selectedLead}
-                  onSuccess={(lead) => {
+                  onSuccess={() => { // Removed unused 'lead' variable
                     // Refresh without loading spinners
                     refreshLeads({ silent: true });
                   }}
-                  onError={(error) => {
+                  onError={(error: Error) => { // Specified Error type
                     console.error('Error with lead operation:', error);
                   }}
                   trigger={
-                    <Button variant={'ghost'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground">
+                    <Button variant={'secondary'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground">
                       <Plus className="h-4 w-4" />
                     </Button>
                   }
@@ -378,7 +396,7 @@ export default function LeadsPage() {
 
               {/* Only show kanban manager button in kanban view */}
               {currentView === 'kanban' && (
-                <div>
+                <div className='mr-2'>
                   <KanbanBoardManagerSheet
                     isOpen={isKanbanManagerOpen}
                     onOpenChange={setIsKanbanManagerOpen}
@@ -389,7 +407,7 @@ export default function LeadsPage() {
                     onReorderBoards={handleReorderBoards}
                     trigger={
                       <Button 
-                        variant={'ghost'} 
+                      variant={'secondary'} 
                         onClick={toggleKanbanManager} 
                         className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
@@ -405,11 +423,11 @@ export default function LeadsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
-                      variant="ghost" 
+                      variant="secondary" 
                       size="sm" 
                       className="h-9 gap-1 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <SlidersHorizontal className="h-4 w-4" />
+                      <Funnel className="h-4 w-4" />
                       <span className="hidden sm:inline text-sm">{getFilterLabel()}</span>
                     </Button>
                   </DropdownMenuTrigger>

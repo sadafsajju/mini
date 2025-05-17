@@ -87,7 +87,7 @@ export default function KanbanColumn({
 
   return (
     <div 
-      className={`bg-muted/60 dark:bg-muted/20 rounded-2xl min-w-64 w-72 flex-shrink-0 h-[calc(100vh-11rem)] flex flex-col transition-all ${isDragOver ? `border-2 ${borderColorClass}` : 'border-2 border-transparent'}`}
+      className={`bg-muted/60 dark:bg-muted/20 rounded-2xl min-w-64 w-72 flex-shrink-0 h-[calc(100vh-15rem)] flex flex-col transition-all ${isDragOver ? `border-2 ${borderColorClass}` : 'border-2 border-transparent'}`}
       onDragOver={e => {
         e.preventDefault();
         setIsDragOver(true);

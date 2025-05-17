@@ -69,7 +69,7 @@ export default function KanbanCardHistory({ leadId }: KanbanCardHistoryProps) {
             {/* Show message if no history */}
             {history.length === 0 && (
               <div className="mb-8 text-center text-muted-foreground">
-                No movement history yet - this lead hasn't been moved between columns.
+                No movement history yet - this lead hasn&apos;t been moved between columns.
               </div>
             )}
             

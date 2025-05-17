@@ -3,9 +3,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
 import { Lead } from '@/types/leads';
-import { Pencil, Phone, Flag, ChevronDown, History } from 'lucide-react';
+import { Pencil, Flag, History } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
 import {
@@ -124,7 +123,7 @@ export default function KanbanCard({ lead, onEditLead, onContactLead, onLeadUpda
           <SheetHeader className="mb-4">
             <SheetTitle>Card Movement Timeline</SheetTitle>
             <SheetDescription>
-              Complete history for "{lead.name}"
+              Complete history for &quot;{lead.name}&quot;
             </SheetDescription>
           </SheetHeader>
           <KanbanCardHistory leadId={lead.id} />

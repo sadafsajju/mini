@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Lead } from '@/types/leads';
-import { ArrowRight, MoveRight } from 'lucide-react';
+import { MoveRight } from 'lucide-react';
 
 interface KanbanCardMoveDialogProps {
   isOpen: boolean;
@@ -55,7 +55,7 @@ export default function KanbanCardMoveDialog({
             </div>
             </DialogTitle>
           <DialogDescription>
-            Add notes about why you're moving this lead.
+            Add notes about why you&apos;re moving this lead.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
