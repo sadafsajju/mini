@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Lead } from '@/types/leads';
-import { Pencil, Phone, Flag, ChevronDown, History } from 'lucide-react';
+import { Pencil, Phone, Flag, ChevronDown, History, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
+import { useLeadDelete } from './LeadDeleteProvider';
 import {
   Sheet,
   SheetContent,
@@ -25,6 +26,7 @@ interface LeadCardProps {
 }
 
 const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpdate }) => {
+  const { openDeleteDialog } = useLeadDelete();
   const [priority, setPriority] = useState<string | undefined>(lead.priority);
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -114,6 +116,22 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onContact, onLeadUpda
           </TooltipTrigger>
           <TooltipContent>
             <p>View History</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        {/* Delete button tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => openDeleteDialog(lead)}
+              className="absolute right-18 top-2 h-7 w-7 p-0 opacity-0 bg-red-800/10 hover:bg-red-800/30 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Delete</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

@@ -4,6 +4,16 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { KanbanColumn } from '@/types/leads';
 import { X, Plus, Pencil, GripVertical } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -35,6 +45,8 @@ export default function KanbanBoardManager({
 }: KanbanBoardManagerProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [boardToDelete, setBoardToDelete] = useState<string | null>(null);
   const [newBoardTitle, setNewBoardTitle] = useState('');
   const [newBoardColor, setNewBoardColor] = useState('blue');
   const [editingBoard, setEditingBoard] = useState<KanbanColumn | null>(null);
@@ -101,14 +113,25 @@ export default function KanbanBoardManager({
     }
   };
 
+  // Open delete confirmation dialog
+  const openDeleteDialog = (id: string) => {
+    setBoardToDelete(id);
+    setIsDeleteAlertOpen(true);
+  };
+
   // Handle removing a board
-  const handleRemoveBoard = async (id: string) => {
-    if (confirm('Are you sure you want to remove this board? All leads in this board will be moved to the first board.')) {
-      try {
-        await onRemoveBoard(id);
-      } catch (error) {
-        console.error('Failed to remove board:', error);
-      }
+  const handleRemoveBoard = async () => {
+    if (!boardToDelete) return;
+    
+    try {
+      setIsSubmitting(true);
+      await onRemoveBoard(boardToDelete);
+      setIsDeleteAlertOpen(false);
+      setBoardToDelete(null);
+    } catch (error) {
+      console.error('Failed to remove board:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -246,7 +269,7 @@ export default function KanbanBoardManager({
                 variant="ghost" 
                 size="icon" 
                 className="h-8 w-8 text-destructive" 
-                onClick={() => handleRemoveBoard(board.id)}
+                onClick={() => openDeleteDialog(board.id)}
                 disabled={boards.length <= 1}
               >
                 <X className="h-4 w-4" />
@@ -317,6 +340,29 @@ export default function KanbanBoardManager({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert Dialog */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the kanban board. All leads in this board will be moved to the first board.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRemoveBoard} 
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

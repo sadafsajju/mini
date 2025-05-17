@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Lead, KanbanColumn } from '@/types/leads';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Phone, Mail, Flag, ArrowUp, ArrowDown, History } from 'lucide-react';
+import { Pencil, Phone, Mail, Flag, ArrowUp, ArrowDown, History, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useLeadDelete } from './LeadDeleteProvider';
 import {
   Table,
   TableBody,
@@ -38,8 +39,9 @@ export default function LeadsList({
   onSort,
   sortColumn,
   sortDirection,
-  onContactLead,
+  onContactLead
 }: LeadsListProps) {
+  const { openDeleteDialog } = useLeadDelete();
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [selectedLeadName, setSelectedLeadName] = useState<string>("");
@@ -205,6 +207,15 @@ export default function LeadsList({
                 <TableCell className="text-muted-foreground">{timeAgo}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => openDeleteDialog(lead)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Delete Lead"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 

@@ -4,6 +4,7 @@ import { KanbanColumn as KanbanColumnType, Lead } from '@/types/leads';
 import KanbanColumn from './KanbanColumn';
 import KanbanBoardManager from './KanbanBoardManager';
 import DeleteZone from './DeleteZone';
+import LeadDeleteAlert from './LeadDeleteAlert';
 import { updateLead, deleteLead } from '@/lib/api/leads';
 import { createCardMovementHistory } from '@/lib/api/kanbanCardHistory';
 import KanbanCardMoveDialog from './KanbanCardMoveDialog';
@@ -42,6 +43,8 @@ export default function KanbanBoard({
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [pendingMove, setPendingMove] = useState<{
     lead: Lead | null,
     sourceColumn: KanbanColumnType | null,
@@ -169,33 +172,51 @@ export default function KanbanBoard({
     setIsDragging(false);
     
     if (draggedLead && sourceColumn) {
-      try {
-        // Update local state immediately for better UX
-        setLocalLeads(prev => prev.filter(lead => lead.id !== draggedLead.id));
-        
-        // Delete the lead from the database
-        await deleteLead(draggedLead.id);
-        
-        // Call the callback to inform parent components about deletion
-        if (onLeadUpdate) {
-          // We're passing a special flag to indicate deletion
-          onLeadUpdate({
-            ...draggedLead,
-            __deleted: true
-          } as any);
-        }
-      } catch (error) {
-        console.error('Error deleting lead:', error);
-        
-        // Revert the local change if the API delete fails
-        // The original leads array from props will have the lead we tried to delete
-        setLocalLeads(leads);
-        fetchBoards({ silent: true });
-      }
+      // Open delete confirmation dialog instead of deleting immediately
+      setDeleteAlertOpen(true);
+    } else {
+      // Reset state if no lead is being dragged
+      setDraggedLead(null);
+      setSourceColumn(null);
     }
+  };
+  
+  // Handle actual deletion after confirmation
+  const handleConfirmDelete = async () => {
+    if (!draggedLead) return;
     
-    setDraggedLead(null);
-    setSourceColumn(null);
+    try {
+      setIsDeleting(true);
+      
+      // Update local state immediately for better UX
+      setLocalLeads(prev => prev.filter(lead => lead.id !== draggedLead.id));
+      
+      // Delete the lead from the database
+      await deleteLead(draggedLead.id);
+      
+      // Call the callback to inform parent components about deletion
+      if (onLeadUpdate) {
+        // We're passing a special flag to indicate deletion
+        onLeadUpdate({
+          ...draggedLead,
+          __deleted: true
+        } as any);
+      }
+      
+      // Close the alert dialog
+      setDeleteAlertOpen(false);
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      
+      // Revert the local change if the API delete fails
+      // The original leads array from props will have the lead we tried to delete
+      setLocalLeads(leads);
+      fetchBoards({ silent: true });
+    } finally {
+      setIsDeleting(false);
+      setDraggedLead(null);
+      setSourceColumn(null);
+    }
   };
 
   // Local function to update columns with a lead moved to a new column
@@ -415,6 +436,15 @@ export default function KanbanBoard({
         fromColumn={pendingMove.sourceColumn?.title || ''}
         toColumn={pendingMove.targetColumn?.title || ''}
         onSave={handleMoveWithNotes}
+      />
+      
+      {/* Delete Confirmation Alert Dialog */}
+      <LeadDeleteAlert
+        isOpen={deleteAlertOpen}
+        onOpenChange={setDeleteAlertOpen}
+        lead={draggedLead}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
       />
     </div>
   );
