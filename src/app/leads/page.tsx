@@ -348,14 +348,14 @@ export default function LeadsPage() {
           </div>
 
           <div className="w-full flex-1 flex flex-col">
-            <div className="flex items-center mb-2">
-              <div className="relative flex-1 sm:flex-initial">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-2">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search leads..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="pl-8 w-full sm:w-64 border-none bg-muted pr-8"
+                  className="pl-8 w-full border-none bg-muted pr-8"
                 />
                 {searchTerm && (
                   <button 
@@ -368,37 +368,18 @@ export default function LeadsPage() {
                 )}
               </div>
 
-              {/* Use the ViewToggle component */}
-              <div className="flex items-center gap-1 px-3 py-2 rounded-md">
-                <ViewToggle 
-                  currentView={currentView} 
-                  onViewChange={handleViewChange} 
-                />
-              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* Use the ViewToggle component */}
+                <div className="flex items-center gap-1 py-2 rounded-md">
+                  <ViewToggle 
+                    currentView={currentView} 
+                    onViewChange={handleViewChange} 
+                  />
+                </div>
 
-              <div className="flex w-full sm:w-auto gap-2 mr-2">
-                <LeadSheet
-                  isOpen={isLeadSheetOpen}
-                  onOpenChange={setIsLeadSheetOpen}
-                  lead={selectedLead}
-                  onSuccess={() => { // Removed unused 'lead' variable
-                    // Refresh without loading spinners
-                    refreshLeads({ silent: true });
-                  }}
-                  onError={(error: Error) => { // Specified Error type
-                    console.error('Error with lead operation:', error);
-                  }}
-                  trigger={
-                    <Button variant={'secondary'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  }
-                />
-              </div>
-
-              {/* Only show kanban manager button in kanban view */}
+                              {/* Only show kanban manager button in kanban view */}
               {currentView === 'kanban' && (
-                <div className='mr-2'>
+                <div>
                   <KanbanBoardManagerSheet
                     isOpen={isKanbanManagerOpen}
                     onOpenChange={setIsKanbanManagerOpen}
@@ -420,14 +401,34 @@ export default function LeadsPage() {
                 </div>
               )}
 
-              {/* Filter Dropdown */}
-              <div className="flex items-center mr-2">
+                <div className="flex gap-2">
+                  <LeadSheet
+                    isOpen={isLeadSheetOpen}
+                    onOpenChange={setIsLeadSheetOpen}
+                    lead={selectedLead}
+                    onSuccess={(lead: Lead) => {
+                      updateLocalLead(lead);
+                      setIsLeadSheetOpen(false);
+                    }}
+                    onError={(error: Error) => {
+                      console.error('Error with lead operation:', error);
+                    }}
+                    trigger={
+                      <Button variant={'secondary'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                </div>
+
+                              {/* Filter Dropdown */}
+              <div className="flex items-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="secondary" 
                       size="sm" 
-                      className="h-9 gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                      className="gap-1 h-10 px-3 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Funnel className="h-4 w-4" />
                       <span className="hidden sm:inline text-sm">{getFilterLabel()}</span>
@@ -479,6 +480,8 @@ export default function LeadsPage() {
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+
               </div>
               
             </div>

@@ -7,14 +7,7 @@ import { Lead } from '@/types/leads';
 import { Pencil, Flag, History } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import KanbanCardHistory from './KanbanCardHistory';
+import LeadHistorySheet from './LeadHistorySheet';
 
 interface KanbanCardProps {
   lead: Lead;
@@ -111,17 +104,11 @@ export default function KanbanCard({ lead, onEditLead, onLeadUpdate }: KanbanCar
       </TooltipProvider>
       
       {/* History Sheet */}
-      <Sheet open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
-        <SheetContent side="right" className="overflow-y-auto w-full sm:max-w-md">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Card Movement Timeline</SheetTitle>
-            <SheetDescription>
-              Complete history for &quot;{lead.name}&quot;
-            </SheetDescription>
-          </SheetHeader>
-          <KanbanCardHistory leadId={lead.id} />
-        </SheetContent>
-      </Sheet>
+      <LeadHistorySheet
+        isOpen={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        lead={lead}
+      />
       <CardHeader className="p-3 pb-0">
         <div className="flex justify-between items-start">
           <CardTitle className="text-base font-normal capitalize">{lead.name}</CardTitle>

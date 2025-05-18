@@ -73,7 +73,7 @@ export default function KanbanBoardManagerSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
       
-      <SheetContent className="sm:max-w-md overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto" side="right">
         <SheetHeader>
           <SheetTitle>Manage Kanban Boards</SheetTitle>
           <SheetDescription>

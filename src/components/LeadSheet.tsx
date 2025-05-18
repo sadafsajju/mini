@@ -208,7 +208,7 @@ export default function LeadSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
       
-      <SheetContent className="sm:max-w-md flex flex-col p-0 h-full">
+      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 h-full" side="right">
         <SheetHeader className="sticky top-0 z-10 border-b px-6 py-4 bg-background">
           <SheetTitle>{isEditing ? 'Edit Lead' : 'Add New Lead'}</SheetTitle>
           <SheetDescription>
@@ -346,7 +346,7 @@ export default function LeadSheet({
           </Form>
         </div>
 
-        <SheetFooter className="sticky bottom-0 border-t px-6 py-4 mt-auto bg-background">
+        <SheetFooter className="sticky gap-2 bottom-0 border-t px-6 py-4 mt-auto bg-background">
           <SheetClose asChild>
             <Button variant="outline" type="button">Cancel</Button>
           </SheetClose>
