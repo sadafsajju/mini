@@ -11,7 +11,7 @@ export default function Home() {
       <section className="flex-1 flex flex-col justify-center items-center text-center px-4 py-16 md:py-24 bg-gradient-to-b from-background to-muted">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-normal tracking-tight mb-6">
-            Manage Your Leads with Ease
+            Manage Your <span className='text-green-700'>Leads</span> with Ease
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             A simple, mini CRM system to track and nurture your leads. 
