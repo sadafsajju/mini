@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SkeletonLoader from './SkeletonLoader';
 import { KanbanColumn as KanbanColumnType, Lead } from '@/types/leads';
 import KanbanColumn from './KanbanColumn';
+import KanbanCarousel from './KanbanCarousel';
 import KanbanBoardManager from './KanbanBoardManager';
 import DeleteZone from './DeleteZone';
 import LeadDeleteAlert from './LeadDeleteAlert';
@@ -45,6 +46,7 @@ export default function KanbanBoard({
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [pendingMove, setPendingMove] = useState<{
     lead: Lead | null,
     sourceColumn: KanbanColumnType | null,
@@ -65,6 +67,20 @@ export default function KanbanBoard({
     reorderBoards,
     fetchBoards
   } = useKanbanBoards(localLeads);
+
+  // Check if this is a mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   // Create wrapper functions with the correct return types
   const handleAddBoard = async (board: Omit<KanbanColumnType, 'leads' | 'id'>) => {
@@ -345,7 +361,6 @@ export default function KanbanBoard({
     const column = columns.find(col => col.id === columnId);
     return column?.title || columnId;
   };
-  
 
   // Handle priority or other lead property updates
   const handleLeadPropertyUpdate = async (updatedLead: Lead) => {
@@ -416,20 +431,55 @@ export default function KanbanBoard({
           <p className="text-destructive font-medium">{boardsError}</p>
         </div>
       ) : (
-        <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden h-full">
-          {columns.map(column => (
-            <KanbanColumn
-              key={`${column.id}-${column.leads.length}-${filterType}`} // Include filterType in key to force re-render
-              column={column}
+        <>
+          {/* Conditionally render KanbanCarousel for mobile or regular columns for desktop */}
+          {isMobile ? (
+            <KanbanCarousel
+              columns={columns}
               onEditLead={onEditLead}
               onContactLead={onContactLead}
               onLeadUpdate={handleLeadPropertyUpdate}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
+              onMobileMoveCard={(lead, sourceColumn, targetColumn) => {
+                // We're intentionally separating the drag-and-drop flow from the direct
+                // mobile card movement flow to avoid simulation issues
+                setPendingMove({
+                  lead,
+                  sourceColumn,
+                  targetColumn
+                });
+                setMoveDialogOpen(true);
+              }}
             />
-          ))}
-        </div>
+          ) : (
+            <div className="flex gap-4 pb-6 pt-2 px-2 w-fit overflow-x-auto overflow-y-hidden h-full">
+              {columns.map(column => (
+                <KanbanColumn
+                  key={`${column.id}-${column.leads.length}-${filterType}`} // Include filterType in key to force re-render
+                  column={column}
+                  onEditLead={onEditLead}
+                  onContactLead={onContactLead}
+                  onLeadUpdate={handleLeadPropertyUpdate}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  allColumns={columns}
+                  onMoveCard={(lead, sourceColumn, targetColumn) => {
+                    // Create a pending move and show dialog just like in the mobile flow
+                    setPendingMove({
+                      lead,
+                      sourceColumn,
+                      targetColumn
+                    });
+                    setMoveDialogOpen(true);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Use our DeleteZone component */}

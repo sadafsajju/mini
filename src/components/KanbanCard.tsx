@@ -4,19 +4,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Lead } from '@/types/leads';
+import { KanbanColumn as KanbanColumnType } from '@/types/leads';
 import { Pencil, Flag, History } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
 import LeadHistorySheet from './LeadHistorySheet';
+import MobileCardMoveButton from './MobileCardMoveButton';
 
 interface KanbanCardProps {
   lead: Lead;
+  column?: KanbanColumnType;
+  allColumns?: KanbanColumnType[];
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
   onLeadUpdate?: (updatedLead: Lead) => void;
+  onMoveCard?: (lead: Lead, sourceColumn: KanbanColumnType, targetColumn: KanbanColumnType) => void;
 }
 
-export default function KanbanCard({ lead, onEditLead, onLeadUpdate }: KanbanCardProps) {
+export default function KanbanCard({ 
+  lead, 
+  column, 
+  allColumns, 
+  onEditLead, 
+  onLeadUpdate,
+  onMoveCard 
+}: KanbanCardProps) {
   const [priority, setPriority] = useState<string | undefined>(lead.priority);
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -101,6 +113,16 @@ export default function KanbanCard({ lead, onEditLead, onLeadUpdate }: KanbanCar
             <p>View History</p>
           </TooltipContent>
         </Tooltip>
+
+        {/* Mobile Move Button - only displayed on mobile */}
+        {column && allColumns && onMoveCard && (
+          <MobileCardMoveButton 
+            lead={lead}
+            currentColumn={column}
+            allColumns={allColumns}
+            onMoveCard={onMoveCard}
+          />
+        )}
       </TooltipProvider>
       
       {/* History Sheet */}
