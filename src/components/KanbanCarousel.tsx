@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { KanbanColumn as KanbanColumnType, Lead } from '@/types/leads';
 import KanbanColumn from './KanbanColumn';
+import { Button } from './ui/button';
 
 interface KanbanCarouselProps {
   columns: KanbanColumnType[];
@@ -104,28 +105,30 @@ export default function KanbanCarousel({
   return (
     <div className="w-full flex flex-col">
       {isMobile && currentColumnTitle && (
-        <div className="text-center mb-2 flex items-center justify-center">
-          <button
+        <div className="text-center mb-2 flex items-center justify-between">
+          <Button
+          variant={'secondary'}
             onClick={handlePrevious}
             disabled={currentIndex === 0}
-            className={`p-1 rounded-full ${
+            className={`rounded-xl ${
               currentIndex === 0 ? 'text-muted-foreground' : 'text-primary'
             }`}
             aria-label="Previous column"
           >
             <ChevronLeft className="h-5 w-5" />
-          </button>
+          </Button>
           <h2 className="font-medium mx-2">{currentColumnTitle}</h2>
-          <button
+          <Button
+          variant={'secondary'}
             onClick={handleNext}
             disabled={currentIndex === columns.length - 1}
-            className={`p-1 rounded-full ${
+            className={`rounded-xl ${
               currentIndex === columns.length - 1 ? 'text-muted-foreground' : 'text-primary'
             }`}
             aria-label="Next column"
           >
             <ChevronRight className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       )}
       
