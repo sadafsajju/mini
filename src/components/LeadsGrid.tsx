@@ -7,13 +7,15 @@ interface LeadsGridProps {
   boards?: KanbanColumn[];
   onEditLead?: (id: number) => void;
   onContactLead?: (id: number) => void;
+  onLeadUpdate?: (updatedLead: Lead) => void;
 }
 
 export const LeadsGrid: React.FC<LeadsGridProps> = ({
   leads,
   boards = [],
   onEditLead,
-  onContactLead
+  onContactLead,
+  onLeadUpdate
 }) => {
   if (leads.length === 0) {
     return (
@@ -35,8 +37,10 @@ export const LeadsGrid: React.FC<LeadsGridProps> = ({
             lead={lead} 
             onEdit={onEditLead}
             onContact={onContactLead}
+            onLeadUpdate={onLeadUpdate}
             boardTitle={board?.title}
             boardColor={board?.color}
+            boards={boards}
           />
         );
       })}

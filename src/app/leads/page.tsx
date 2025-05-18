@@ -343,10 +343,6 @@ export default function LeadsPage() {
       <Header />
       <LeadDeleteProvider onLeadDeleted={handleLeadUpdate}>
         <div className="container mx-auto p-4 flex-1 flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <h1 className="text-3xl font-normal">Leads</h1>
-          </div>
-
           <div className="w-full flex-1 flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-2">
               <div className="relative w-full sm:w-64">

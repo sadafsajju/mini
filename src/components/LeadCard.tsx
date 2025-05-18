@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Lead } from '@/types/leads';
+import { Lead, KanbanColumn } from '@/types/leads';
 import { Pencil, Flag, History, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateLead } from '@/lib/api/leads';
 import { useLeadDelete } from './LeadDeleteProvider';
 import LeadHistorySheet from './LeadHistorySheet';
+import KanbanCardMoveDialog from './KanbanCardMoveDialog';
+import { createCardMovementHistory } from '@/lib/api/kanbanCardHistory';
 
 interface LeadCardProps {
   lead: Lead;
@@ -18,59 +20,142 @@ interface LeadCardProps {
   onLeadUpdate?: (updatedLead: Lead) => void;
   boardTitle?: string;
   boardColor?: string;
+  boards?: KanbanColumn[];
 }
 
-const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onLeadUpdate, boardTitle, boardColor = 'blue' }) => {
+// Function to get priority color class based on priority level
+const getPriorityColorClass = (priority: string | null | undefined) => {
+  if (!priority) return '';
+  
+  switch (priority) {
+    case 'high':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+    case 'low':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+    default:
+      return '';
+  }
+};
+
+const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onLeadUpdate, boardTitle, boardColor = 'blue', boards = [] }) => {
   const { openDeleteDialog } = useLeadDelete();
-  const [priority, setPriority] = useState<string | undefined>(lead.priority);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [status, setStatus] = useState<string | undefined>(lead.status);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [currentBoardTitle, setCurrentBoardTitle] = useState<string | undefined>(boardTitle);
+  const [currentBoardColor, setCurrentBoardColor] = useState<string | undefined>(boardColor);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    newStatus: string;
+    oldStatus: string | undefined;
+    fromTitle: string | undefined;
+    toTitle: string | undefined;
+  } | null>(null);
+
+  // Always update status and board title/color
+  useEffect(() => {
+    setStatus(lead.status);
+    
+    // Find the current board to get its title and color
+    if (lead.status && boards.length > 0) {
+      const currentBoard = boards.find(board => board.id === lead.status);
+      if (currentBoard) {
+        setCurrentBoardTitle(currentBoard.title);
+        setCurrentBoardColor(currentBoard.color);
+      } else {
+        setCurrentBoardTitle(boardTitle);
+        setCurrentBoardColor(boardColor);
+      }
+    } else {
+      setCurrentBoardTitle(boardTitle);
+      setCurrentBoardColor(boardColor);
+    }
+  }, [lead.status, boardTitle, boardColor, boards]);
   
   const formattedDate = lead.created_at 
     ? formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })
     : '';
 
-  // Priority configuration
-  const priorityColors = {
-    low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-    high: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  // Handle status/board change
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === status) return;
+    
+    // Find the new board to get its title
+    const newBoard = boards.find(board => board.id === newStatus);
+    // Find the current board
+    const currentBoard = boards.find(board => board.id === status);
+    
+    // Set the pending status change
+    setPendingStatusChange({
+      newStatus,
+      oldStatus: status,
+      fromTitle: currentBoard?.title,
+      toTitle: newBoard?.title
+    });
+    
+    // Open the move dialog
+    setMoveDialogOpen(true);
   };
   
-  const priorityIcons = {
-    low: <Flag className="h-3 w-3" />,
-    medium: <Flag className="h-3 w-3" />,
-    high: <Flag className="h-3 w-3" />,
-  };
-
-  // Handle priority change
-  const handlePriorityChange = async (newPriority: string) => {
-    if (newPriority === priority) return;
+  // Handle actual status change after notes are entered
+  const handleMoveWithNotes = async (notes: string) => {
+    if (!pendingStatusChange) return;
+    
+    const { newStatus, oldStatus } = pendingStatusChange;
     
     try {
-      setIsUpdating(true);
+      setIsStatusUpdating(true);
+      
+      // Find the new board to get its title and color
+      const newBoard = boards.find(board => board.id === newStatus);
       
       // Update local state immediately for better UX
-      setPriority(newPriority);
+      setStatus(newStatus);
+      if (newBoard) {
+        setCurrentBoardTitle(newBoard.title);
+        setCurrentBoardColor(newBoard.color);
+      }
       
       // Update the lead in the database
       const updatedLead = await updateLead(lead.id, { 
-        priority: newPriority as 'low' | 'medium' | 'high' 
+        status: newStatus 
       });
+      
+      // Create history entry for the movement with notes
+      if (oldStatus) {
+        await createCardMovementHistory(
+          lead.id,
+          oldStatus,
+          newStatus,
+          notes,
+          pendingStatusChange.fromTitle,
+          pendingStatusChange.toTitle
+        );
+      }
       
       // Notify parent component about the update
       if (onLeadUpdate) {
         onLeadUpdate(updatedLead);
       }
     } catch (error) {
-      console.error('Error updating lead priority:', error);
-      // Revert to original priority if update fails
-      setPriority(lead.priority);
+      console.error('Error updating lead status:', error);
+      // Revert to original status if update fails
+      setStatus(oldStatus);
+      setCurrentBoardTitle(boardTitle);
+      setCurrentBoardColor(boardColor);
     } finally {
-      setIsUpdating(false);
+      setIsStatusUpdating(false);
+      setPendingStatusChange(null);
     }
   };
-
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  
+  // Handle dialog close without saving
+  const handleCancelMove = () => {
+    setMoveDialogOpen(false);
+    setPendingStatusChange(null);
+  };
   
   return (
     <Card className="flex-end mb-3 shadow-none border bg-card dark:bg-card/80 dark:border-muted/20 rounded-xl hover:shadow-md transition-shadow group relative">
@@ -127,12 +212,21 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onLeadUpdate, boardTi
         </TooltipProvider>
       </div>
 
-      
       {/* History Sheet */}
       <LeadHistorySheet
         isOpen={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         lead={lead}
+      />
+      
+      {/* Movement Notes Dialog */}
+      <KanbanCardMoveDialog
+        isOpen={moveDialogOpen}
+        onClose={handleCancelMove}
+        lead={lead}
+        fromColumn={pendingStatusChange?.fromTitle || ''}
+        toColumn={pendingStatusChange?.toTitle || ''}
+        onSave={handleMoveWithNotes}
       />
       <CardHeader className="p-3 pb-0">
         <div className="flex justify-between items-start">
@@ -153,55 +247,40 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onLeadUpdate, boardTi
           <CardDescription className="flex items-center justify-between text-xs py-2 px-2">
             <span>{formattedDate}</span>
             <div className='flex gap-2'>
-            {boardTitle && (
-              <Badge 
-                variant="outline" 
-                className={`text-xs font-normal bg-${boardColor}-100 text-${boardColor}-800 dark:bg-${boardColor}-900/30 dark:text-${boardColor}-400 border-${boardColor}-200 dark:border-${boardColor}-800/30`}
-              >
-                {boardTitle}
+            {/* Priority Flag */}
+            {lead.priority && (
+              <Badge className={`px-2 py-0 h-6 ${getPriorityColorClass(lead.priority)}`}>
+                <div className="flex items-center gap-1">
+                  <Flag className="h-3 w-3 mr-1" />
+                  <span className="capitalize">{lead.priority}</span>
+                </div>
               </Badge>
-
             )}
-            
-            {/* Priority Dropdown */}
-            <Select
-              value={priority}
-              onValueChange={handlePriorityChange}
-              disabled={isUpdating}
-            >
-              <SelectTrigger 
-                className={`w-24 h-6 px-2 text-xs border-none ${priority ? priorityColors[priority as keyof typeof priorityColors] : ''}`}
+            {/* Status/Board Dropdown */}
+            {boards && boards.length > 0 && (
+              <Select
+                value={status}
+                onValueChange={handleStatusChange}
+                disabled={isStatusUpdating}
               >
-                <SelectValue placeholder="Set priority">
-                  {priority && (
-                    <div className="flex items-center gap-1">
-                      {priorityIcons[priority as keyof typeof priorityIcons]}
-                      <span>{priority}</span>
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low" className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Flag className="h-3 w-3 text-blue-600" />
-                    <span>Low</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="medium" className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Flag className="h-3 w-3 text-yellow-600" />
-                    <span>Medium</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="high" className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Flag className="h-3 w-3 text-red-600" />
-                    <span>High</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                <SelectTrigger 
+                  className={`w-24 h-6 px-2 text-xs border-none bg-${currentBoardColor || boardColor}-100 text-${currentBoardColor || boardColor}-800 dark:bg-${currentBoardColor || boardColor}-900/30 dark:text-${currentBoardColor || boardColor}-400`}
+                >
+                  <SelectValue placeholder="Set status">
+                    {currentBoardTitle || boardTitle}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {boards.map((board) => (
+                    <SelectItem key={board.id} value={board.id} className="text-xs">
+                      <div className="flex items-center gap-1">
+                        <span>{board.title}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             </div>
           </CardDescription>
         </div>
