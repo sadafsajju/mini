@@ -36,7 +36,6 @@ export function AnimatedGridBackground() {
     
     // Beam configuration
     const beamCount = 8; // Number of energy beams
-    const beamColor = 'rgba(34, 197, 94, 0.8)'; // Bright green
     const beamWidth = 4; // Increased beam width for larger grid
     const beamSpeed = 3.5; // Increased speed for larger grid
     
@@ -52,8 +51,20 @@ export function AnimatedGridBackground() {
       active: boolean;
       reachedCenter: boolean;
       intensity: number; // 0-1 for gradient intensity
+      willFizzle: boolean;
+      fizzleDistance: number;
+      pulsePhase: number;
+      pulseSpeed: number;
+      private canvasRef: HTMLCanvasElement;
+      private gridSizeRef: number;
+      private gridCenterXRef: number;
+      private gridCenterYRef: number;
       
-      constructor(startX: number, startY: number, trailLength: number) {
+      constructor(startX: number, startY: number, trailLength: number, canvas: HTMLCanvasElement, gridSize: number, gridCenterX: number, gridCenterY: number) {
+        this.canvasRef = canvas;
+        this.gridSizeRef = gridSize;
+        this.gridCenterXRef = gridCenterX;
+        this.gridCenterYRef = gridCenterY;
         // Position the beam at a grid intersection point
         this.currentX = startX;
         this.currentY = startY;
@@ -76,7 +87,7 @@ export function AnimatedGridBackground() {
         
         // Random chance to fizzle out before reaching center
         this.willFizzle = Math.random() < 0.4; // 40% chance to fizzle out
-        this.fizzleDistance = gridSize * (2 + Math.floor(Math.random() * 7)); // Fizzle at random distance from center - adjusted for larger grid
+        this.fizzleDistance = this.gridSizeRef * (2 + Math.floor(Math.random() * 7)); // Fizzle at random distance from center - adjusted for larger grid
         
         // Pulse animation properties
         this.pulsePhase = Math.random() * Math.PI * 2; // Random starting phase
@@ -86,28 +97,28 @@ export function AnimatedGridBackground() {
       // Find next target that moves toward the center
       getNextTarget() {
         // Calculate available grid intersections
-        const maxX = Math.floor(canvas.width / gridSize) * gridSize;
-        const maxY = Math.floor(canvas.height / gridSize) * gridSize;
+        const maxX = Math.floor(this.canvasRef.width / this.gridSizeRef) * this.gridSizeRef;
+        const maxY = Math.floor(this.canvasRef.height / this.gridSizeRef) * this.gridSizeRef;
         
         // Determine which directions would move us closer to the center
         const moveTowardsCenter = [];
         
         // Check horizontal movement
-        if (this.currentX < gridCenterX) {
+        if (this.currentX < this.gridCenterXRef) {
           moveTowardsCenter.push('right');
-        } else if (this.currentX > gridCenterX) {
+        } else if (this.currentX > this.gridCenterXRef) {
           moveTowardsCenter.push('left');
         }
         
         // Check vertical movement
-        if (this.currentY < gridCenterY) {
+        if (this.currentY < this.gridCenterYRef) {
           moveTowardsCenter.push('down');
-        } else if (this.currentY > gridCenterY) {
+        } else if (this.currentY > this.gridCenterYRef) {
           moveTowardsCenter.push('up');
         }
         
         // If we've reached the center on one axis, we can only move on the other
-        if (this.currentX === gridCenterX && this.currentY === gridCenterY) {
+        if (this.currentX === this.gridCenterXRef && this.currentY === this.gridCenterYRef) {
           // At center, prepare to deactivate
           this.reachedCenter = true;
           return { x: this.currentX, y: this.currentY };
@@ -376,7 +387,7 @@ export function AnimatedGridBackground() {
       
       // Create a new beam with random trail length between 25-45 (adjusted for larger grid)
       const trailLength = 25 + Math.floor(Math.random() * 20);
-      const beam = new EnergyBeam(x, y, trailLength);
+      const beam = new EnergyBeam(x, y, trailLength, canvas, gridSize, gridCenterX, gridCenterY);
       beams.push(beam);
     };
     
