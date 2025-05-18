@@ -15,6 +15,12 @@ import {
   Funnel,
   X
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import KanbanBoard from '@/components/KanbanBoard';
 import LeadsGrid from '@/components/LeadsGrid';
 import LeadsList from '@/components/LeadsList';
@@ -385,13 +391,22 @@ export default function LeadsPage() {
                     onRemoveBoard={handleRemoveBoard}
                     onReorderBoards={handleReorderBoards}
                     trigger={
-                      <Button 
-                      variant={'secondary'} 
-                        onClick={toggleKanbanManager} 
-                        className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <SquareStack className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant={'secondary'} 
+                              onClick={toggleKanbanManager} 
+                              className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <SquareStack className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Manage Boards</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     }
                   />
                 </div>
@@ -410,9 +425,18 @@ export default function LeadsPage() {
                       console.error('Error with lead operation:', error);
                     }}
                     trigger={
-                      <Button variant={'secondary'} onClick={handleAddNewLead} className="whitespace-nowrap text-muted-foreground">
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant={'secondary'} onClick={handleAddNewLead} className="whitespace-nowrap bg-green-700 hover:bg-green-800 hover:shadow-lg hover:transition-shadow hover:shadow-green-950">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Add Leads</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     }
                   />
                 </div>

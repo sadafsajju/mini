@@ -91,17 +91,6 @@ export default function LeadsList({
     }
   };
   
-  // Function to render the priority value with proper icon
-  const renderPriorityValue = (priority: string | undefined) => {
-    if (!priority) return <span>Set priority</span>;
-    return (
-      <div className="flex items-center gap-1 text-xs">
-        {priorityConfig[priority as keyof typeof priorityConfig]?.icon || <Flag className="h-3 w-3 mr-1" />}
-        <span className="capitalize">{priority}</span>
-      </div>
-    );
-  };
-  
   const handleViewHistory = (leadId: number, leadName: string) => {
     setSelectedLeadId(leadId);
     setSelectedLeadName(leadName);

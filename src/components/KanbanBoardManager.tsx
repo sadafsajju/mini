@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { KanbanColumn } from '@/types/leads';
-import { X, Plus, Pencil, GripVertical } from 'lucide-react';
+import { Plus, Pencil, GripVertical, Trash } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 interface KanbanBoardManagerProps {
@@ -272,7 +272,7 @@ export default function KanbanBoardManager({
                 onClick={() => openDeleteDialog(board.id)}
                 disabled={boards.length <= 1}
               >
-                <X className="h-4 w-4" />
+                <Trash className="h-4 w-4" />
               </Button>
             </div>
           </div>

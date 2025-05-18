@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-screen">
       <Header />
       {/* Hero Section */}
       <section className="flex-1 flex flex-col justify-center items-center text-center px-4 py-16 md:py-24 bg-gradient-to-b from-background to-muted">
@@ -18,7 +18,7 @@ export default function Home() {
             Stay organized and boost your sales with our intuitive interface.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="gap-2 rounded-xl">
+            <Button variant={'secondary'} asChild size="lg" className="gap-2 rounded-xl text-white bg-green-700 hover:bg-green-800">
               <Link href="/leads">
                 <Eye className="h-5 w-5" />
                 View Leads

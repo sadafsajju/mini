@@ -308,11 +308,7 @@ export default function LeadSheet({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a priority" />
